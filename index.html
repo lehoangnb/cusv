@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChameleonUltra Sniff Viewer</title>
+<style>
+  /* ============================================================
+     Base & reset
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #1b2030 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 0%, #161a28 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    padding: 28px 20px 60px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ============================================================
+     Design tokens
+     ============================================================ */
+  :root {
+    /* Surfaces */
+    --bg: #0b0d14;
+    --surface: #141721;
+    --surface-2: #1b1f2c;
+    --surface-3: #232839;
+    --glass: rgba(20, 23, 33, 0.72);
+    --border: #2a2f42;
+    --border-soft: #20253690;
+    --hairline: rgba(255, 255, 255, 0.06);
+
+    /* Text */
+    --text: #e6e9f2;
+    --text-dim: #9aa0b8;
+    --text-faint: #646a82;
+
+    /* Accents */
+    --accent: #7c9cff;
+    --accent-rgb: 124, 156, 255;
+    --accent-2: #5b7ce0;
+    --accent-glow: rgba(124, 156, 255, 0.35);
+    --green: #4ade80;
+    --green-rgb: 74, 222, 128;
+    --red: #f87171;
+    --red-rgb: 248, 113, 113;
+    --orange: #fbbf24;
+    --orange-rgb: 251, 191, 36;
+    --blue: #60a5fa;
+    --blue-rgb: 96, 165, 250;
+
+    /* Radii */
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 18px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.45);
+    --ring: 0 0 0 3px rgba(var(--accent-rgb), 0.3);
+
+    /* Misc */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ============================================================
+     Layout
+     ============================================================ */
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  /* ============================================================
+     Header
+     ============================================================ */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: -28px -20px 24px;
+    padding: 14px 24px;
+    background: linear-gradient(180deg, rgba(11, 13, 20, 0.92), rgba(11, 13, 20, 0.78));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .topbar .logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.22), rgba(var(--green-rgb), 0.16));
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 12px rgba(var(--accent-rgb), 0.15);
+  }
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  h1 small {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  .topbar .topbar-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    transition: all 0.2s var(--ease);
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-faint);
+    box-shadow: 0 0 8px transparent;
+  }
+  .status-pill.live .dot {
+    background: var(--green);
+    box-shadow: 0 0 10px rgba(var(--green-rgb), 0.7);
+    animation: pulse 2s var(--ease) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    margin-bottom: 22px;
+  }
+
+  /* ============================================================
+     Drop zone
+     ============================================================ */
+  .drop-zone {
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: var(--r-xl);
+    padding: 52px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.25s var(--ease), background 0.25s var(--ease), transform 0.15s var(--ease);
+    background: linear-gradient(180deg, var(--surface), rgba(20, 23, 33, 0.4));
+    overflow: hidden;
+  }
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(500px 180px at 50% 0%, rgba(var(--accent-rgb), 0.10), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s var(--ease);
+    pointer-events: none;
+  }
+  .drop-zone:hover { border-color: rgba(var(--accent-rgb), 0.6); }
+  .drop-zone:hover::before { opacity: 1; }
+  .drop-zone.dragover {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+    transform: scale(1.005);
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12), var(--shadow-md);
+  }
+  .drop-zone.dragover::before { opacity: 1; }
+  .drop-zone-icon {
+    font-size: 2.8rem;
+    margin-bottom: 12px;
+    opacity: 0.75;
+    display: inline-block;
+    filter: drop-shadow(0 4px 14px rgba(var(--accent-rgb), 0.35));
+    animation: float 3.5s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  .drop-zone-label { font-size: 0.96rem; color: var(--text-dim); }
+  .drop-zone-label strong { color: var(--accent); font-weight: 600; }
+  .drop-zone-hint { font-size: 0.74rem; color: var(--text-faint); margin-top: 10px; }
+  .drop-zone input { display: none; }
+
+  /* ============================================================
+     Card / panel surfaces
+     ============================================================ */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ============================================================
+     File info bar
+     ============================================================ */
+  .file-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 30px;
+    background: var(--surface);
+    border-radius: var(--r-md);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    font-size: 0.82rem;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .file-info dt {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+  .file-info dd { font-weight: 500; }
+  .file-info .info-block { padding-left: 12px; border-left: 2px solid var(--border); }
+  .file-info .info-block.slot-a { border-left-color: var(--accent); }
+  .file-info .info-block.slot-b { border-left-color: var(--green); }
+  .file-info .info-empty { opacity: 0.4; }
+  .file-info .info-fname { font-weight: 400; color: var(--text-dim); }
+  .file-info .info-extras { margin-left: 12px; color: var(--text-dim); }
+  .file-info .info-extras strong { color: var(--text); font-weight: 600; }
+
+  /* ============================================================
+     Tabs (unified, used at every level)
+     ============================================================ */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    width: fit-content;
+    box-shadow: var(--shadow-sm);
+  }
+  .tab {
+    padding: 7px 16px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: 0.8rem;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    transition: background 0.18s var(--ease), color 0.18s var(--ease);
+    user-select: none;
+    font-family: inherit;
+  }
+  .tab:hover { background: var(--surface-2); color: var(--text); }
+  .tab.active {
+    background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.45), 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    padding: 16px;
+    display: none;
+    overflow-x: auto;
+    box-shadow: var(--shadow-sm);
+  }
+  .panel.active { display: block; }
+
+  /* ============================================================
+     Waveform
+     ============================================================ */
+  .waveform-container {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 30%),
+      var(--surface-2);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    cursor: crosshair;
+    border: 1px solid var(--border-soft);
+  }
+  .waveform-container canvas { display: block; width: 100%; height: 100%; }
+
+  .waveform-controls {
+    display: flex;
+    gap: 18px;
+    margin-top: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .waveform-controls label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .waveform-controls input[type=range] { width: 150px; accent-color: var(--accent); cursor: pointer; }
+  .waveform-controls input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
+  .waveform-controls .spacer { margin-left: auto; }
+  .waveform-stats {
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+    font-family: inherit;
+  }
+
+  /* ============================================================
+     Frame table
+     ============================================================ */
+  .frame-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .frame-table th {
+    text-align: left;
+    padding: 9px 12px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 2;
+    backdrop-filter: blur(6px);
+  }
+  .frame-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  .frame-table tbody tr:nth-child(odd of :not(.detail-row)) td { background: rgba(255, 255, 255, 0.012); }
+  .frame-table tbody tr:hover td { background: rgba(var(--accent-rgb), 0.06); }
+  .frame-row { cursor: pointer; transition: background 0.12s var(--ease); }
+
+  /* Direction badges */
+  .dir-rx, .dir-tx {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .dir-rx { background: rgba(var(--blue-rgb), 0.16); color: var(--blue); border: 1px solid rgba(var(--blue-rgb), 0.3); }
+  .dir-tx { background: rgba(var(--green-rgb), 0.16); color: var(--green); border: 1px solid rgba(var(--green-rgb), 0.3); }
+
+  .hex-bytes {
+    font-family: 'SF Mono', 'Consolas', monospace;
+    word-break: break-all;
+    white-space: pre-wrap;
+    letter-spacing: 0.02em;
+  }
+  .hex-bytes .parity-err {
+    background: rgba(var(--red-rgb), 0.28);
+    border-radius: 3px;
+    padding: 1px 2px;
+    box-shadow: inset 0 0 0 1px rgba(var(--red-rgb), 0.5);
+  }
+  .hex-bytes .byte-val { cursor: help; }
+  .ascii-col { color: var(--text-dim); font-size: 0.74rem; }
+
+  /* Frame type color coding */
+  .frame-unknown { color: var(--orange); }
+  .frame-reqa { color: var(--accent); }
+  .frame-wupa { color: var(--accent-2); }
+  .frame-anticoll_cl1, .frame-anticoll_cl2, .frame-anticoll_cl3 { color: var(--blue); }
+  .frame-select_cl1, .frame-select_cl2, .frame-select_cl3 { color: var(--green); }
+  .frame-sak, .frame-sak_0x00, .frame-sak_0x04, .frame-sak_0x08, .frame-sak_0x09,
+  .frame-sak_0x18, .frame-sak_0x20, .frame-sak_0x24, .frame-sak_0x28, .frame-sak_0x38 { color: var(--green); }
+  .frame-atqa { color: var(--blue); }
+  .frame-uid_cl1, .frame-uid_cl2, .frame-uid { color: var(--text); }
+  .frame-halt { color: var(--red); }
+  .frame-auth, .frame-auth_challenge, .frame-auth_response { color: var(--orange); }
+  .frame-rats { color: var(--green); }
+  .frame-ats { color: var(--accent); }
+  .frame-pps { color: var(--accent-2); }
+  .frame-iblock { color: var(--text); }
+  .frame-rblock { color: var(--text-dim); }
+  .frame-sblock { color: var(--orange); }
+  .frame-deselect { color: var(--red); }
+  .frame-wtx { color: var(--orange); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 44px 20px;
+    color: var(--text-dim);
+  }
+  .empty-state-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.5; }
+
+  /* Error */
+  .error-box {
+    background: rgba(var(--red-rgb), 0.12);
+    border: 1px solid rgba(var(--red-rgb), 0.5);
+    border-radius: var(--r-md);
+    padding: 12px 16px;
+    color: var(--red);
+    font-size: 0.84rem;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Detail (expandable) row */
+  .detail-row td {
+    padding: 2px 12px 12px !important;
+    border-bottom: 2px solid rgba(var(--accent-rgb), 0.6) !important;
+    background: var(--surface) !important;
+    white-space: normal !important;
+  }
+  .detail-card {
+    background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-sm) var(--r-md) var(--r-md) var(--r-sm);
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    color: var(--text);
+    line-height: 1.55;
+    box-shadow: var(--shadow-sm);
+  }
+  .detail-card .detail-title { font-weight: 650; color: var(--accent); margin-bottom: 5px; }
+  .detail-card .detail-body { color: var(--text-dim); }
+
+  /* ============================================================
+     Slot bar
+     ============================================================ */
+  .slot-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .slot-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px 7px 9px;
+    border-radius: var(--r-md);
+    font-size: 0.78rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease), transform 0.12s var(--ease);
+    box-shadow: var(--shadow-sm);
+  }
+  .slot-pill:hover { border-color: rgba(var(--accent-rgb), 0.5); transform: translateY(-1px); }
+  .slot-pill.active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+    box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.25), var(--shadow-sm);
+  }
+  .slot-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: var(--r-sm);
+    font-weight: 700;
+    font-size: 0.72rem;
+  }
+  .slot-badge.slot-a { background: rgba(var(--accent-rgb), 0.2); color: var(--accent); }
+  .slot-badge.slot-b { background: rgba(var(--green-rgb), 0.2); color: var(--green); }
+  .slot-fname { font-weight: 600; color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slot-status { color: var(--text-dim); font-size: 0.7rem; }
+  .slot-load-btn {
+    padding: 7px 14px;
+    border-radius: var(--r-md);
+    font-size: 0.78rem;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+  .slot-load-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-2); }
+
+  /* ============================================================
+     Compare layout
+     ============================================================ */
+  .compare-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+  }
+  .compare-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .compare-col { min-width: 0; overflow-x: auto; }
+  .col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: var(--r-sm);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .col-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: var(--r-sm);
+    font-weight: 700;
+    font-size: 0.72rem;
+  }
+  .col-badge.ca { background: rgba(var(--accent-rgb), 0.2); color: var(--accent); }
+  .col-badge.cb { background: rgba(var(--green-rgb), 0.2); color: var(--green); }
+  .col-header .col-name { color: var(--text-dim); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .compare-sync-scroll { overflow-y: auto; max-height: 65vh; }
+  .compare-layout .frame-table th { z-index: 1; }
+
+  /* Diff highlighting */
+  .frame-diff {
+    outline: 2px solid var(--orange);
+    outline-offset: -2px;
+    border-radius: var(--r-sm);
+  }
+  .diff-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(var(--orange-rgb), 0.18);
+    border: 1px solid rgba(var(--orange-rgb), 0.45);
+    color: var(--orange);
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .diff-identical {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--green);
+    font-size: 0.78rem;
+  }
+
+  /* Overlaid waveform (LF compare) */
+  .waveform-compare {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 30%),
+      var(--surface-2);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    cursor: crosshair;
+    border: 1px solid var(--border-soft);
+  }
+  .waveform-compare canvas { display: block; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+
+  .compare-legend { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 0.78rem; }
+  .compare-legend .swatch { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* ============================================================
+     Messages (chat-style) view
+     ============================================================ */
+  .messages-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 8px 4px;
+  }
+  .message {
+    display: flex;
+    gap: 10px;
+    max-width: 85%;
+    animation: msgIn 0.22s var(--ease);
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .message.tag { align-self: flex-start; flex-direction: row; }
+  .message.reader { align-self: flex-end; flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+  .message.tag .msg-avatar {
+    background: linear-gradient(135deg, rgba(var(--green-rgb), 0.22), rgba(var(--green-rgb), 0.08));
+    color: var(--green);
+    border: 1px solid rgba(var(--green-rgb), 0.35);
+  }
+  .message.reader .msg-avatar {
+    background: linear-gradient(135deg, rgba(var(--blue-rgb), 0.22), rgba(var(--blue-rgb), 0.08));
+    color: var(--blue);
+    border: 1px solid rgba(var(--blue-rgb), 0.35);
+  }
+  .msg-bubble {
+    background: var(--surface-2);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .message.reader .msg-bubble { border-color: rgba(var(--blue-rgb), 0.4); background: rgba(var(--blue-rgb), 0.06); }
+  .message.tag .msg-bubble { border-color: rgba(var(--green-rgb), 0.4); background: rgba(var(--green-rgb), 0.06); }
+  .msg-header { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; font-size: 0.72rem; }
+  .msg-sender { font-weight: 600; color: var(--text); }
+  .msg-type {
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.68rem;
+    background: var(--surface-3);
+  }
+  .msg-number { color: var(--text-dim); font-size: 0.7rem; }
+  .msg-hex {
+    font-family: 'SF Mono', 'Consolas', monospace;
+    color: var(--text);
+    word-break: break-all;
+    white-space: pre-wrap;
+    margin: 4px 0;
+    letter-spacing: 0.02em;
+  }
+  .msg-ascii {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-family: 'SF Mono', 'Consolas', monospace;
+  }
+  .msg-desc {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-style: italic;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--hairline);
+  }
+  .message .parity-err { background: rgba(var(--red-rgb), 0.28); border-radius: 2px; padding: 0 1px; }
+
+  .msg-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0 6px;
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .msg-divider span {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+  .msg-divider::before, .msg-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-msgs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .compare-msgs .messages-container { max-height: 70vh; }
+
+  /* ============================================================
+     Compare fallback / empty
+     ============================================================ */
+  .compare-fallback {
+    text-align: center;
+    padding: 56px 20px;
+    color: var(--text-dim);
+  }
+  .compare-fallback-icon { font-size: 2.2rem; margin-bottom: 12px; opacity: 0.5; }
+
+  /* Utility */
+  .hidden { display: none !important; }
+  .ml-auto { margin-left: auto; }
+
+  /* ============================================================
+     Responsive
+     ============================================================ */
+  @media (max-width: 760px) {
+    body { padding: 20px 12px 50px; }
+    .topbar { margin: -20px -12px 18px; padding: 12px 16px; }
+    h1 { font-size: 1.05rem; }
+    .topbar .topbar-status { margin-left: 0; width: 100%; }
+    .frame-table td, .frame-table th { padding: 5px 7px; font-size: 0.7rem; }
+    .file-info { flex-direction: column; gap: 8px; }
+    .message { max-width: 95%; }
+    .compare-layout, .compare-msgs { grid-template-columns: 1fr; }
+    .drop-zone { padding: 38px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="topbar">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12L7 12"/><path d="M7 12L7 7"/><path d="M7 7H12"/><path d="M12 7L12 12"/><path d="M12 12L17 12"/><path d="M17 12L17 17"/><path d="M17 17H22"/><path d="M22 17L22 12"/><path d="M22 12L22 7"/><path d="M22 7H17"/><path d="M17 7L17 2"/><path d="M12 2H7"/><path d="M7 2L7 7"/></svg>
+    </div>
+    <h1>Sniff Viewer <small>for ChameleonUltra .bin files</small></h1>
+    <div class="topbar-status">
+      <span class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">No file loaded</span></span>
+    </div>
+  </header>
+
+  <p class="subtitle">Drop an HF or LF sniff dump to inspect frames or ADC waveform &mdash; drop 1 or 2 files to compare.</p>
+
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-zone-icon">&#x1F4E1;</div>
+    <div class="drop-zone-label">Drop <strong>.bin</strong> files here or <strong>click to browse</strong></div>
+    <div class="drop-zone-hint">Supports LF Sniff (raw ADC) &amp; HF 14A Sniff (packed frames)</div>
+    <input type="file" id="fileInput" accept=".bin,.dump" multiple>
+  </div>
+
+  <input type="file" id="fileInputB" accept=".bin,.dump" class="hidden">
+
+  <div id="slotBar" class="slot-bar hidden"></div>
+  <div id="fileInfo" class="file-info hidden"></div>
+  <div id="errorBox" class="error-box hidden"></div>
+
+  <div id="tabs" class="hidden">
+    <div class="tab-bar" id="tabBar"></div>
+    <div id="panels"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  State
+// ============================================================
+const state = {
+  fileA: null, // { name, u8, type, frames, extra }
+  fileB: null,
+  activeSlot: 'A',   // next drop / explicit load goes here
+  currentView: 'A',  // which file is shown in single-file tabs
+};
+
+function slotData(slot) { return slot === 'A' ? state.fileA : state.fileB; }
+function setSlot(slot, data) { slot === 'A' ? (state.fileA = data) : (state.fileB = data); }
+function clearSlot(slot) { slot === 'A' ? (state.fileA = null) : (state.fileB = null); }
+function bothLoaded() { return state.fileA && state.fileB; }
+function slotCount() { return (state.fileA ? 1 : 0) + (state.fileB ? 1 : 0); }
+function nextEmptySlot() { return state.fileA ? 'B' : 'A'; }
+
+// ============================================================
+//  Parity helpers (ISO 14443-A)
+// ============================================================
+function oddParity(value) {
+  let v = value;
+  for (let i of [4, 2, 1]) v ^= v >> i;
+  return (v & 1) ^ 1;
+}
+
+// ============================================================
+//  Frame type detection (HF 14A) — ISO 14443-3 / MIFARE Classic
+// ============================================================
+function detectFrameType(data, isTx, prevFrame) {
+  if (data.length === 0) return 'unknown';
+  const d0 = data[0];
+
+  if (data.length === 1) {
+    if (!isTx && d0 === 0x26) return 'REQA';
+    if (!isTx && d0 === 0x52) return 'WUPA';
+    if (isTx && (d0 & 0x80) === 0x00) {
+      return `SAK_0x${d0.toString(16).padStart(2,'0')}`;
+    }
+    return `CMD_0x${d0.toString(16).padStart(2,'0')}`;
+  }
+
+  if (data.length === 2 && isTx) {
+    return 'ATQA';
+  }
+
+  const selByte = d0;
+  if (!isTx) {
+    if (selByte === 0x93 || selByte === 0x92) {
+      if (data.length >= 2) {
+        const nvb = data[1];
+        const nBytes = (nvb >> 4) & 0x0F;
+        if (nBytes >= 5 && data.length >= 7) return 'SELECT_CL1';
+        return 'ANTICOLL_CL1';
+      }
+    }
+    if (selByte === 0x95 || selByte === 0x94) {
+      if (data.length >= 2) {
+        const nvb = data[1];
+        const nBytes = (nvb >> 4) & 0x0F;
+        if (nBytes >= 5 && data.length >= 7) return 'SELECT_CL2';
+        return 'ANTICOLL_CL2';
+      }
+    }
+    if (selByte === 0x97 || selByte === 0x96) {
+      if (data.length >= 2) {
+        const nvb = data[1];
+        const nBytes = (nvb >> 4) & 0x0F;
+        if (nBytes >= 5 && data.length >= 7) return 'SELECT_CL3';
+        return 'ANTICOLL_CL3';
+      }
+    }
+  }
+
+  if (isTx && data.length >= 4) {
+    if (data.length === 5) {
+      const bcc = data[0] ^ data[1] ^ data[2] ^ data[3];
+      if (bcc === data[4]) return 'UID_CL1';
+    }
+    if (data.length === 4 && data[0] === 0x88) {
+      const bcc = data[0] ^ data[1] ^ data[2];
+      if (bcc === data[3]) return 'UID_CL2';
+    }
+    if (data.length === 5) {
+      if (data[0] !== 0x00 && data[0] < 0x88) return 'UID';
+    }
+  }
+
+  if (!isTx && data.length === 4 && d0 === 0x50 && data[1] === 0x00) return 'HALT';
+  if (!isTx && data.length === 3 && d0 === 0xE0) return 'RATS';
+  if (!isTx && (d0 & 0xF0) === 0xD0) return 'PPS';
+
+  if (isTx && data.length >= 2 && d0 <= 0x1F && d0 > 0x00) {
+    if (d0 === data.length) return 'ATS';
+    if (d0 + 1 >= data.length) return 'ATS';
+  }
+
+  if (!isTx && (d0 === 0x60 || d0 === 0x61) && data.length === 4) return 'AUTH';
+  if (!isTx && data.length === 8 && prevFrame && prevFrame.frameType === 'AUTH') return 'AUTH_CHALLENGE';
+
+  if (data.length >= 1) {
+    const pcb = d0;
+    if ((pcb & 0xC0) === 0x00) return 'I-BLOCK';
+    if ((pcb & 0xC6) === 0x82) return 'R-BLOCK';
+    if ((pcb & 0xC0) === 0xC0) {
+      if ((pcb & 0xF7) === 0xC2) return 'DESELECT';
+      if ((pcb & 0xFC) === 0xF0 || (pcb & 0xFC) === 0xF2) return 'WTX';
+      return 'S-BLOCK';
+    }
+  }
+
+  return 'DATA';
+}
+
+// ============================================================
+//  SAK (Select Acknowledge) value decoder
+// ============================================================
+function buildSAKDescription(hexVal) {
+  const val = parseInt(hexVal, 16);
+  const flags = [];
+
+  if (val & 0x01) flags.push('Bit0=1 (dành riêng)');
+  if (val & 0x02) flags.push('Bit1=1 (dành riêng)');
+  if (val & 0x04) flags.push('UID chưa hoàn chỉnh (cần cấp tiếp theo)');
+  else flags.push('UID đã hoàn chỉnh');
+  if (val & 0x20) flags.push('Hỗ trợ ISO 14443-4 (T=CL)');
+  else flags.push('Không hỗ trợ ISO 14443-4');
+  if (val & 0x40) flags.push('Bit6=1 (dành riêng)');
+  if (val & 0x80) flags.push('Bit7=1 (bất thường)');
+
+  const knownSAK = {
+    '00': 'Thẻ MIFARE Ultralight / NTAG (hoặc thẻ không hỗ trợ ISO 14443-4, UID 4 byte)',
+    '04': 'Thẻ MIFARE Ultralight / NTAG (UID 7 byte, chưa hoàn chỉnh)',
+    '08': 'Thẻ MIFARE Classic 1K (UID 4 byte, không ISO 14443-4)',
+    '09': 'Thẻ MIFARE Classic Mini (UID 4 byte)',
+    '18': 'Thẻ MIFARE Classic 4K (UID 4 byte, không ISO 14443-4)',
+    '20': 'Thẻ ISO 14443-4 (T=CL) — UID 4 byte, hỗ trợ giao thức lớp 4',
+    '24': 'Thẻ ISO 14443-4 (T=CL) — UID 7 byte, chưa hoàn chỉnh',
+    '28': 'Thẻ MIFARE Plus (UID 4 byte, ISO 14443-4)',
+    '38': 'Thẻ MIFARE DESFire (UID 4 byte, ISO 14443-4)',
+  };
+
+  const known = knownSAK[hexVal.toLowerCase()] || null;
+  let title = `SAK (Select Acknowledge) — 0x${hexVal.toUpperCase()}`;
+  let detail = `SAK = 0x${hexVal.toUpperCase()} (${val}): ` + flags.join(' | ') + '.';
+  if (known) detail += ' ' + known + '.';
+  return { title, detail };
+}
+
+// ============================================================
+//  Frame type detail descriptions (ISO 14443-A)
+// ============================================================
+function describeFrame(f) {
+  const t = f.frameType;
+  const d = f.data;
+
+  const hex = (b) => '0x' + (b != null ? b.toString(16).padStart(2,'0').toUpperCase() : '??');
+
+  // Static descriptions (may use f / d at call-time)
+  const descriptions = {
+    'REQA': {
+      title: 'REQA (Lệnh Yêu Cầu, Loại A)',
+      detail: 'Đầu đọc quét thẻ ISO 14443-A trong trường. Gửi liên tục khi không có thẻ nào trong trường. ' +
+              'Khung ngắn (7 bit), giá trị 0x26. Bước đầu tiên của vòng lặp chống xung đột.',
+    },
+    'WUPA': {
+      title: 'WUPA (Lệnh Đánh Thức, Loại A)',
+      detail: 'Đầu đọc đánh thức các thẻ đang ở trạng thái HALT. Thẻ ở trạng thái IDLE sẽ bỏ qua lệnh này. ' +
+              'Khung ngắn (7 bit), giá trị 0x52. Dùng để kích hoạt lại thẻ đã dừng mà không cần chạy lại toàn bộ chu trình chống xung đột.',
+    },
+    'HALT': {
+      title: 'HLTA (Lệnh Dừng, Loại A)',
+      detail: 'Đưa thẻ đã chọn vào trạng thái HALT. Thẻ ngừng phản hồi cho đến khi được đánh thức bởi WUPA hoặc trường được reset. ' +
+              'Khung chuẩn: 0x50 0x00 kèm CRC. Chỉ thẻ hiện đang được chọn mới phản hồi.',
+    },
+    'ANTICOLL_CL1': {
+      title: 'CHỐNG XUNG ĐỘT (Cấp 1)',
+      detail: `Đầu đọc thực hiện chống xung đột để phân giải UID của thẻ. Cấp 1 đọc các byte UID 0–3. ` +
+              `Lệnh: ${hex(d[0])} ` +
+              `(SEL=0x93, NVB=${
+                d[0] != null ? ((d[0] & 0x0F) < 7 ? (d[0] & 0x0F) * 8 : (d[0] & 0x0F) * 8 + 8) : '?'
+              } bit). Chống xung đột dạng khung bit với mã hóa Manchester.`,
+    },
+    'ANTICOLL_CL2': {
+      title: 'CHỐNG XUNG ĐỘT (Cấp 2)',
+      detail: `Chống xung đột Cấp 2 — đọc byte UID 4–6. Dùng cho UID 7 byte (kích thước kép). ` +
+              `Lệnh: ${hex(d[0])} (SEL=0x95).`,
+    },
+    'ANTICOLL_CL3': {
+      title: 'CHỐNG XUNG ĐỘT (Cấp 3)',
+      detail: `Chống xung đột Cấp 3 — đọc byte UID 7–9. Dùng cho UID 10 byte (kích thước ba). ` +
+              `Lệnh: ${hex(d[0])} (SEL=0x97).`,
+    },
+    'SELECT_CL1': {
+      title: 'SELECT (Cấp 1)',
+      detail: `Đầu đọc chọn thẻ với UID đã phân giải ở Cấp 1. Thẻ phản hồi bằng SAK (Select Acknowledge) ` +
+              `cho biết UID đã hoàn chỉnh chưa (bit 2 của SAK) và có hỗ trợ ISO 14443-4 không (bit 5 của SAK).`,
+    },
+    'SELECT_CL2': {
+      title: 'SELECT (Cấp 2)',
+      detail: `Đầu đọc chọn thẻ dùng UID một phần từ Cấp 2. Thẻ phản hồi bằng SAK. ` +
+              `Dùng khi SAK từ CL1 cho biết UID chưa hoàn chỉnh.`,
+    },
+    'SELECT_CL3': {
+      title: 'SELECT (Cấp 3)',
+      detail: `Lệnh chọn cấp cuối cùng cho UID 10 byte. Sau bước này, toàn bộ UID đã được biết và thẻ ở trạng thái ACTIVE.`,
+    },
+    'RATS': {
+      title: 'RATS (Yêu Cầu ATS)',
+      detail: `Đầu đọc yêu cầu ATS (Answer To Select) từ thẻ. Byte đầu là 0xE0, byte thứ hai là tham số FSDI/DRI ` +
+              `(${hex(d[1])}). ` +
+              `Đánh dấu bước chuyển từ vòng lặp chống xung đột sang giao thức truyền tải ISO 14443-4.`,
+    },
+    'ATS': {
+      title: 'ATS (Trả Lời ATS)',
+      detail: `Thẻ phản hồi RATS với các khả năng của mình: tốc độ dữ liệu hỗ trợ (TA1), kích thước khung (FSCI), ` +
+              `tùy chọn giao thức (TB1/TC1), và tùy chọn khối byte lịch sử. ` +
+              `Độ dài: ${d.length} byte. Byte đầu tiên (TL) cho biết tổng độ dài ATS.`,
+    },
+    'PPS': {
+      title: 'PPS (Lựa Chọn Tham Số Giao Thức)',
+      detail: `Đầu đọc đề xuất thay đổi tham số giao tiếp (tốc độ baud, kích thước khung). ` +
+              `Byte đầu: ${hex(d[0])} (PPSS). ` +
+              `Thẻ phải phản hồi chính xác khung PPS để chấp nhận tham số mới.`,
+    },
+    'AUTH': {
+      title: 'AUTH (Xác Thực MIFARE Classic)',
+      detail: `${f.isTx ? 'TAG→RD' : 'RD→TAG'}: Lệnh xác thực MIFARE Classic. ` +
+              `Loại khóa: ${d[0] === 0x60 ? 'Khóa A' : d[0] === 0x61 ? 'Khóa B' : hex(d[0])}. ` +
+              `Block: ${hex(d[1])}. ` +
+              `Khởi tạo chuỗi xác thực CRYPTO1 3 bước. Các khung 8 byte tiếp theo là thử thách/phản hồi.`,
+    },
+    'DESELECT': {
+      title: 'DESELECT (Hủy Chọn)',
+      detail: `Đầu đọc hủy chọn thẻ hiện tại, đưa thẻ về trạng thái HALT. Khối S với lệnh DESELECT (0xC2). ` +
+              `Thẻ xác nhận bằng S(WTX) chứa PCB tương tự được phản hồi lại.`,
+    },
+    'WTX': {
+      title: 'WTX (Gia Hạn Thời Gian Chờ)',
+      detail: `Khối S yêu cầu gia hạn thời gian chờ. Thẻ (hoặc đầu đọc) cần thêm thời gian để xử lý lệnh. ` +
+              `Chứa hệ số nhân WTXM (1–59) kéo dài FWT theo hệ số đó.`,
+    },
+    'S-BLOCK': {
+      title: 'S-Block (Khối Giám Sát)',
+      detail: `Khối giám sát T=CL dùng cho điều khiển giao thức. PCB: ${hex(d[0])}. ` +
+              `Dùng cho DESELECT, WTX, và các chức năng điều khiển ISO 14443-4 khác.`,
+    },
+    'I-BLOCK': {
+      title: 'I-Block (Khối Thông Tin)',
+      detail: `Khối dữ liệu ứng dụng T=CL. Mang APDU hoặc dữ liệu lớp trên. ` +
+              `PCB: ${hex(d[0])} (số khối: ${d[0] != null ? (d[0] & 0x01) : '?'}). ` +
+              `${d.length > 1 ? `CID: ${d.length >= 2 ? hex(d[1]) : 'không có'}` : ''}` +
+              `${d.length > 2 ? ` | NAD: ${d.length >= 3 ? hex(d[2]) : 'không có'}` : ''}`,
+    },
+    'R-BLOCK': {
+      title: 'R-Block (Sẵn Sàng Nhận / NAK)',
+      detail: `Khối xác nhận T=CL. PCB: ${hex(d[0])}. ` +
+              `Mẫu bit cho biết: ${(d[0] & 0x10) ? 'NAK (lỗi, yêu cầu truyền lại)' : 'ACK (đã nhận OK)'}. ` +
+              `Số khối: ${d[0] != null ? (d[0] & 0x01) : '?'}.`,
+    },
+    'CMD_0x26': {
+      title: 'Khung Ngắn — 0x26',
+      detail: 'Khung ngắn, 7 bit, giá trị 0x26. Đây là lệnh REQA tiêu chuẩn để quét thẻ trong trường.',
+    },
+    'CMD_0x52': {
+      title: 'Khung Ngắn — 0x52',
+      detail: 'Khung ngắn, 7 bit, giá trị 0x52. Đây là lệnh WUPA tiêu chuẩn để đánh thức thẻ đã dừng.',
+    },
+    'DATA': {
+      title: 'Dữ Liệu Ứng Dụng',
+      detail: `Khung dữ liệu thô — có thể là dữ liệu lớp ứng dụng (APDU, NDEF, độc quyền), ` +
+              `hoặc lệnh giao thức không nhận dạng được. ${f.data.length} byte.`,
+    },
+    'unknown': {
+      title: 'Khung Không Xác Định',
+      detail: 'Định dạng khung không nhận dạng được. Có thể là thu thập không đầy đủ, nhiễu, hoặc lệnh không chuẩn.',
+    },
+    'ATQA': {
+      title: 'ATQA (Answer To Request Type A)',
+      detail: `Thẻ phản hồi REQA với 2 byte ATQA. Byte cao (${hex(d[0])}): ` +
+              `mã nền tảng độc quyền. Byte thấp (${hex(d[1])}): ` +
+              `các bit UID, chống xung đột, định danh chip. ` +
+              `MIFARE Classic 1K thường là 0x00 0x04. MIFARE Classic 4K: 0x00 0x02. Ultralight: 0x00 0x44.`,
+    },
+    'UID_CL1': {
+      title: 'UID Cấp 1 (Định Danh Thẻ)',
+      detail: `Thẻ gửi UID 4 byte + BCC tại Cấp 1. ` +
+              `UID: ${hex(d[0])} ${hex(d[1])} ${hex(d[2])} ${hex(d[3])} ` +
+              `(BCC=${hex(d[4])}). ` +
+              `BCC = UID0 ⊕ UID1 ⊕ UID2 ⊕ UID3.`,
+    },
+    'UID_CL2': {
+      title: 'UID Cấp 2 (Định Danh Thẻ, Phần Mở Rộng)',
+      detail: `Thẻ gửi phần mở rộng UID tại Cấp 2. Byte CT=0x88 + 3 byte UID + BCC. ` +
+              `UID đầy đủ là UID CL1 (4 byte) + UID CL2 (3 byte) = UID 7 byte.`,
+    },
+    'UID': {
+      title: 'UID (Định Danh Thẻ)',
+      detail: `Thẻ gửi định danh UID. ${d.length} byte. Đây là phản hồi sau lệnh ANTICOLLISION.`,
+    },
+    'AUTH_CHALLENGE': {
+      title: 'AUTH Thử Thách (8 byte)',
+      detail: `Đầu đọc gửi khối thử thách 8 byte (đã mã hóa CRYPTO1) sau khi nhận nonce từ thẻ. ` +
+              `Đây là bước thứ 2 trong chuỗi xác thực 3 bước của MIFARE Classic.`,
+    },
+    'AUTH_RESPONSE': {
+      title: 'AUTH Phản Hồi (4 byte)',
+      detail: `Thẻ gửi phản hồi 4 byte (đã mã hóa) để hoàn tất xác thực CRYPTO1. ` +
+              `Nếu CRC của đầu đọc khớp, kênh truyền đã được mã hóa thành công.`,
+    },
+  };
+
+  let desc = descriptions[t];
+  if (!desc && t.startsWith('SAK_0x'))  desc = buildSAKDescription(t.slice(6));
+  if (!desc && t.startsWith('CMD_0x')) {
+    const val = t.slice(6);
+    desc = {
+      title: `Khung Ngắn — 0x${val.toUpperCase()}`,
+      detail: `Khung ngắn, 7 bit, giá trị 0x${val.toUpperCase()}. Mã lệnh không chuẩn hoặc dành riêng cho nhà sản xuất.`,
+    };
+  }
+  if (!desc) desc = { title: `${t}`, detail: `${f.data.length} byte dữ liệu.` };
+  return desc;
+}
+
+// ============================================================
+//  Byte -> ASCII helper
+// ============================================================
+function toAscii(b) {
+  return b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : '.';
+}
+
+// ============================================================
+//  Auto-detect file type
+// ============================================================
+function detectFileType(u8) {
+  if (u8.length < 2) return 'lf';
+
+  let hdr = (u8[0] << 8) | u8[1];
+  let szBits = hdr & 0x7FFF;
+  if (szBits > 0 && szBits < 10000) {
+    let szBytes = Math.ceil(szBits / 8);
+    if (2 + szBytes <= u8.length) return 'hf';
+  }
+  if (hdr === 0 && u8.length < 100) return 'hf';
+  return 'lf';
+}
+
+// ============================================================
+//  Parse HF sniff buffer
+// ============================================================
+function parseHFSniff(u8) {
+  const frames = [];
+  let prevFrame = null;
+  let i = 0;
+  while (i + 2 <= u8.length) {
+    const hdr = (u8[i] << 8) | u8[i+1];
+    i += 2;
+    const isTx = Boolean(hdr & 0x8000);
+    let szBits = hdr & 0x7FFF;
+
+    if (szBits === 0) break;
+
+    const szBytes = Math.ceil(szBits / 8);
+    if (i + szBytes > u8.length) break;
+
+    const raw = u8.slice(i, i + szBytes);
+    i += szBytes;
+
+    // Strip parity for ISO 14443-A frames (szBits % 9 === 0, szBits >= 9)
+    let data = raw;
+    let strippedBits = szBits;
+    const parityBits = [];
+    if (szBits >= 9 && szBits % 9 === 0) {
+      const nBytes = szBits / 9;
+      const allBits = [];
+      for (const byte of raw) {
+        for (let b = 0; b < 8; b++) {
+          allBits.push((byte >> b) & 1);
+        }
+      }
+      const stripped = [];
+      for (let nb = 0; nb < nBytes; nb++) {
+        let val = 0;
+        for (let b = 0; b < 8; b++) {
+          val |= allBits[nb * 9 + b] << b;
+        }
+        stripped.push(val);
+        parityBits.push(allBits[nb * 9 + 8]);
+      }
+      data = new Uint8Array(stripped);
+      strippedBits = nBytes * 8;
+    }
+
+    const frameType = detectFrameType(data, isTx, prevFrame);
+    const hexStr = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    const asciiStr = Array.from(data).map(toAscii).join('');
+
+    const frame = {
+      index: frames.length,
+      raw, data,
+      szBits: strippedBits, rawSzBits: szBits,
+      isTx, parityBits, frameType, hexStr, asciiStr,
+    };
+    frames.push(frame);
+    prevFrame = frame;
+  }
+  return frames;
+}
+
+// ============================================================
+//  Build hex string with parity error highlighting
+// ============================================================
+function buildHexStr(f) {
+  let hexParts = [];
+  if (f.parityBits.length > 0 && f.parityBits.length === f.data.length) {
+    for (let bi = 0; bi < f.data.length; bi++) {
+      const expected = oddParity(f.data[bi]);
+      const actual = f.parityBits[bi];
+      const hex = f.data[bi].toString(16).padStart(2, '0');
+      if (expected !== actual) {
+        hexParts.push(`<span class="parity-err" title="parity error: expected ${expected}, got ${actual}">${hex}</span>`);
+      } else {
+        hexParts.push(hex);
+      }
+    }
+  } else {
+    hexParts = Array.from(f.data).map(b => b.toString(16).padStart(2, '0'));
+  }
+  return hexParts.join(' ');
+}
+
+// ============================================================
+//  Compute diff between two HF frame sets
+// ============================================================
+function computeFrameDiff(framesA, framesB) {
+  const diffMap = {};
+  const maxLen = Math.max(framesA.length, framesB.length);
+  for (let i = 0; i < maxLen; i++) {
+    const fa = framesA[i] || null;
+    const fb = framesB[i] || null;
+    let diffA = false, diffB = false;
+    if (!fa) { diffB = true; }
+    else if (!fb) { diffA = true; }
+    else {
+      if (fa.frameType !== fb.frameType || fa.data.length !== fb.data.length) {
+        diffA = true; diffB = true;
+      }
+    }
+    if (diffA) diffMap['A_' + i] = true;
+    if (diffB) diffMap['B_' + i] = true;
+  }
+  return diffMap;
+}
+
+// ============================================================
+//  Phase bucketing (single source of truth for message dividers)
+// ============================================================
+function phaseForFrameType(ft) {
+  if (ft === 'REQA' || ft === 'WUPA' || ft === 'ATQA' ||
+      ft.startsWith('ANTICOLL_') || ft.startsWith('UID') || ft.startsWith('SELECT_') || ft.startsWith('SAK_'))
+    return 'Chống Xung Đột & Chọn Thẻ';
+  if (ft === 'RATS' || ft === 'ATS' || ft === 'PPS')
+    return 'Kích Hoạt Giao Thức (ISO 14443-4)';
+  if (ft === 'AUTH' || ft === 'AUTH_CHALLENGE' || ft === 'AUTH_RESPONSE')
+    return 'Xác Thực MIFARE Classic (CRYPTO1)';
+  if (ft === 'I-BLOCK' || ft === 'R-BLOCK' || ft === 'S-BLOCK' || ft === 'DESELECT' || ft === 'WTX')
+    return 'Trao Đổi Dữ Liệu (T=CL)';
+  if (ft === 'HALT')
+    return 'Kết Thúc Phiên';
+  if (ft === 'DATA')
+    return 'Dữ Liệu Mã Hóa (Sau Xác Thực)';
+  return '';
+}
+
+// ============================================================
+//  Generic tab switcher binder
+//    tabBarEl: the .tab-bar element
+//    onActivate(tabEl): called for the clicked tab
+// ============================================================
+function bindTabSwitcher(tabBarEl, onActivate) {
+  const tabs = tabBarEl.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabBarEl.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      onActivate(tab);
+    });
+  });
+}
+
+// ============================================================
+//  Waveform helpers (shared between single LF + LF compare)
+// ============================================================
+function getViewRange(u8, zoomVal, autoFit) {
+  let zoom = zoomVal / 100;
+  let viewLen;
+  if (autoFit) {
+    viewLen = u8.length;
+  } else {
+    viewLen = Math.floor(u8.length / zoom);
+  }
+  viewLen = Math.max(viewLen, 1);
+  viewLen = Math.min(viewLen, u8.length);
+  const start = Math.max(0, u8.length - viewLen);
+  const end = u8.length;
+  return { start, end };
+}
+
+function valueRange(u8, start, end) {
+  let yMin = 255, yMax = 0;
+  for (let j = start; j < end; j++) { const v = u8[j]; if (v < yMin) yMin = v; if (v > yMax) yMax = v; }
+  return { yMin, yMax, yRange: Math.max(yMax - yMin, 1) };
+}
+
+// Draw a single waveform into a context, fitting within [offsetY, offsetY+drawH].
+function drawWaveform(ctx, u8, color, fillStops, opts) {
+  const { w, h, dpr, offsetY, drawH, zoomVal, autoFit, drawGrid, label } = opts;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, offsetY, w, drawH);
+
+  if (u8.length === 0) return;
+
+  const { start, end } = getViewRange(u8, zoomVal, autoFit);
+  const { yMin, yMax, yRange } = valueRange(u8, start, end);
+  const pad = 6;
+  const innerH = drawH - pad * 2;
+  const step = w / (end - start - 1 || 1);
+
+  // Grid
+  if (drawGrid) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 0.5;
+    for (let y = 0; y <= 4; y++) {
+      const yy = offsetY + pad + (innerH / 4) * y;
+      ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(w, yy); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    const centerY = offsetY + pad + innerH * 0.5;
+    ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(w, centerY); ctx.stroke();
+  }
+
+  // Points
+  const pts = [];
+  for (let j = start; j < end; j++) {
+    const x = (j - start) * step;
+    const norm = (u8[j] - yMin) / yRange;
+    const y = offsetY + pad + innerH * (1 - norm);
+    pts.push([x, y]);
+  }
+
+  // Fill under line
+  if (fillStops && pts.length > 1) {
+    const grad = ctx.createLinearGradient(0, offsetY, 0, offsetY + drawH);
+    grad.addColorStop(0, fillStops[0]);
+    grad.addColorStop(1, fillStops[1]);
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], offsetY + drawH);
+    for (const [x, y] of pts) ctx.lineTo(x, y);
+    ctx.lineTo(pts[pts.length - 1][0], offsetY + drawH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < pts.length; i++) {
+    if (i === 0) ctx.moveTo(pts[i][0], pts[i][1]);
+    else ctx.lineTo(pts[i][0], pts[i][1]);
+  }
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = 'rgba(154,160,184,0.85)';
+  ctx.font = '11px monospace';
+  ctx.fillText(`max=${yMax} (0x${yMax.toString(16).padStart(2,'0')})`, 6, offsetY + 14);
+  ctx.fillText(`min=${yMin} (0x${yMin.toString(16).padStart(2,'0')})`, 6, offsetY + drawH - 5);
+  if (label) ctx.fillText(label, w - 130, offsetY + drawH - 5);
+}
+
+// ============================================================
+//  UI: status pill + file info + slot bar
+// ============================================================
+function updateStatus() {
+  const pill = document.getElementById('statusPill');
+  const text = document.getElementById('statusText');
+  const n = slotCount();
+  if (n === 0) { pill.classList.remove('live'); text.textContent = 'No file loaded'; }
+  else if (n === 1) { pill.classList.add('live'); text.textContent = '1 file loaded'; }
+  else { pill.classList.add('live'); text.textContent = '2 files loaded'; }
+}
+
+function showFileInfo() {
+  const el = document.getElementById('fileInfo');
+  const slots = [
+    { label: 'A', data: state.fileA, cls: 'slot-a' },
+    { label: 'B', data: state.fileB, cls: 'slot-b' },
+  ];
+  let html = '';
+  for (const s of slots) {
+    if (!s.data) {
+      html += `<div class="info-block ${s.cls} info-empty" style="min-width:200px">
+        <dt>File ${s.label}</dt>
+        <dd style="color:var(--text-dim);font-style:italic">Not loaded</dd>
+      </div>`;
+      continue;
+    }
+    const d = s.data;
+    const typeLabel = d.type === 'hf' ? 'HF 14A' : 'LF ADC';
+    let extras = '';
+    if (d.extra) {
+      extras = Object.entries(d.extra)
+        .map(([k, v]) => `<span class="info-extras">${k}: <strong>${v}</strong></span>`)
+        .join('');
+    }
+    html += `<div class="info-block ${s.cls}" style="min-width:200px">
+      <dt>File ${s.label} <span class="info-fname">${d.name}</span></dt>
+      <dd>${typeLabel} &middot; ${d.u8.length.toLocaleString()} bytes${extras}</dd>
+    </div>`;
+  }
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+  el.style.display = 'flex';
+}
+
+function renderSlotBar() {
+  const el = document.getElementById('slotBar');
+  const slots = [
+    { label: 'A', data: state.fileA, cls: 'slot-a' },
+    { label: 'B', data: state.fileB, cls: 'slot-b' },
+  ];
+  let html = '';
+  for (const s of slots) {
+    if (s.data) {
+      html += `<div class="slot-pill${state.currentView === s.label ? ' active' : ''}" data-slot="${s.label}">
+        <span class="slot-badge ${s.cls}">${s.label}</span>
+        <span class="slot-fname">${s.data.name}</span>
+        <span class="slot-status">${s.data.type === 'hf' ? s.data.frames.length + ' frames' : s.data.u8.length + ' samples'}</span>
+      </div>`;
+    } else {
+      html += `<div class="slot-load-btn" data-load="${s.label}">+ Load File ${s.label}</div>`;
+    }
+  }
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+  el.style.display = 'flex';
+
+  el.querySelectorAll('.slot-pill').forEach(p => p.addEventListener('click', () => switchView(p.dataset.slot)));
+  el.querySelectorAll('.slot-load-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    loadFileSlot(b.dataset.load);
+  }));
+}
+
+function loadFileSlot(slot) {
+  state.activeSlot = slot;
+  document.getElementById('fileInputB').click();
+}
+
+function switchView(slot) {
+  state.currentView = slot;
+  renderSlotBar();
+  renderCurrentView();
+}
+
+// ============================================================
+//  Render: Frames table
+// ============================================================
+function buildFrameTable(container, frames, detailPrefix) {
+  if (frames.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F50D;</div>No frames found.</div>';
+    return;
+  }
+  let html = `<table class="frame-table">
+    <thead><tr>
+      <th>#</th><th>Dir</th><th>Type</th><th>Bits</th><th>Bytes</th><th>Data</th><th>ASCII</th>
+    </tr></thead><tbody>`;
+  for (const f of frames) {
+    const dirClass = f.isTx ? 'dir-tx' : 'dir-rx';
+    const dirLabel = f.isTx ? 'THẺ→ĐỌC' : 'ĐỌC→THẺ';
+    const hexStr = buildHexStr(f);
+    const asciiStr = Array.from(f.data).map(toAscii).join('');
+    const typeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const desc = describeFrame(f);
+    const did = detailPrefix + '-' + f.index;
+    html += `<tr class="frame-row" data-idx="${f.index}" data-detail="${did}">
+      <td>${f.index}</td>
+      <td><span class="${dirClass}">${dirLabel}</span></td>
+      <td class="${typeClass}">${f.frameType}</td>
+      <td>${f.szBits}</td>
+      <td>${f.data.length}</td>
+      <td class="hex-bytes"><span class="byte-val">${hexStr}</span></td>
+      <td class="ascii-col">${asciiStr}</td>
+    </tr>
+    <tr class="detail-row hidden" id="${did}">
+      <td colspan="7">
+        <div class="detail-card">
+          <div class="detail-title">${desc.title}</div>
+          <div class="detail-body">${desc.detail}</div>
+        </div>
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+  container.querySelectorAll('.frame-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const did = row.dataset.detail;
+      const detailRow = document.getElementById(did);
+      if (detailRow) detailRow.classList.toggle('hidden');
+    });
+  });
+}
+
+// ============================================================
+//  Render: Messages (chat-style) view
+//    withDesc: include the italic description block (used in single view)
+// ============================================================
+function renderMessages(frames, withDesc) {
+  if (frames.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">&#x1F4AC;</div>No messages.</div>';
+  }
+  let phase = '';
+  let html = '<div class="messages-container">';
+  for (const f of frames) {
+    const newPhase = phaseForFrameType(f.frameType);
+    if (newPhase && newPhase !== phase) {
+      phase = newPhase;
+      html += `<div class="msg-divider"><span>${phase}</span></div>`;
+    }
+    const isTag = f.isTx;
+    const side = isTag ? 'tag' : 'reader';
+    const senderLabel = isTag ? 'Thẻ' : 'Đầu Đọc';
+    const avatar = isTag ? '&#x1F4F6;' : '&#x1F4E1;';
+    const hexStr = buildHexStr(f);
+    const asciiStr = Array.from(f.data).map(toAscii).join('');
+    const desc = withDesc ? describeFrame(f) : null;
+    const msgTypeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
+    html += `<div class="message ${side}">
+      <div class="msg-avatar">${avatar}</div>
+      <div class="msg-bubble">
+        <div class="msg-header">
+          <span class="msg-sender">${senderLabel}</span>
+          <span class="msg-type ${msgTypeClass}">${f.frameType}</span>
+          <span class="msg-number">#${f.index}${withDesc ? ' · ' + f.szBits + ' bits' : ''}</span>
+        </div>
+        <div class="msg-hex">${hexStr}</div>
+        <div class="msg-ascii">${asciiStr}</div>
+        ${desc ? `<div class="msg-desc">${desc.detail}</div>` : ''}
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+// ============================================================
+//  Render: LF single waveform into a container
+// ============================================================
+function renderSingleLF(u8, containerId, slotLabel) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `<div class="waveform-container">
+    <canvas id="wf-${containerId}"></canvas>
+  </div>
+  <div class="waveform-controls">
+    <label>Zoom <input type="range" id="zoom-${containerId}" min="1" max="200" value="100"></label>
+    <label class="spacer"><input type="checkbox" id="fit-${containerId}" checked> Auto-fit</label>
+  </div>
+  <div class="waveform-stats" id="stats-${containerId}"></div>`;
+
+  const canvas = document.getElementById('wf-' + containerId);
+  const ctx = canvas.getContext('2d');
+  const zoomSlider = document.getElementById('zoom-' + containerId);
+  const autoFitCheck = document.getElementById('fit-' + containerId);
+
+  function draw() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = rect.width;
+    const h = rect.height;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+
+    drawWaveform(ctx, u8, '#7c9cff',
+      ['rgba(124,156,255,0.28)', 'rgba(124,156,255,0)'],
+      { w, h, dpr, offsetY: 0, drawH: h, zoomVal: parseInt(zoomSlider.value), autoFit: autoFitCheck.checked,
+        drawGrid: true, label: `${getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked).end - getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked).start} samples` });
+
+    const { start, end } = getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked);
+    // stats
+    const { yMin, yMax } = valueRange(u8, start, end);
+    document.getElementById('stats-' + containerId).textContent =
+      `File ${slotLabel||''}: ${u8.length} samples total | View: ${end - start} samples | Range: 0x${yMin.toString(16).padStart(2,'0')}–0x${yMax.toString(16).padStart(2,'0')} | ~125 kHz | ${((end-start)*8/1000).toFixed(1)} ms / ${(u8.length*8/1000).toFixed(1)} ms`;
+  }
+
+  zoomSlider.addEventListener('input', draw);
+  autoFitCheck.addEventListener('change', () => { if (autoFitCheck.checked) draw(); });
+  window.addEventListener('resize', draw);
+  requestAnimationFrame(draw);
+}
+
+// ============================================================
+//  Render: HF Compare (frames + messages side by side)
+// ============================================================
+function renderHFCompare(containerId) {
+  const container = document.getElementById(containerId);
+  const framesA = state.fileA.frames;
+  const framesB = state.fileB.frames;
+  const diffMap = computeFrameDiff(framesA, framesB);
+  const diffCount = Object.keys(diffMap).length;
+
+  container.innerHTML = `
+    <div class="compare-toolbar">
+      <div class="tab-bar">
+        <div class="tab active" data-cmp-tab="frames">Frames</div>
+        <div class="tab" data-cmp-tab="messages">Messages</div>
+      </div>
+      ${diffCount > 0
+        ? `<span class="diff-count">&#9888; ${diffCount} difference${diffCount === 1 ? '' : 's'}</span>`
+        : '<span class="diff-identical">&#10003; Identical frame structure</span>'}
+    </div>
+    <div id="cmp-frames" class="compare-layout"></div>
+    <div id="cmp-messages" class="compare-msgs hidden"></div>
+  `;
+
+  document.getElementById('cmp-frames').innerHTML =
+    buildCompareTable('A', framesA, diffMap, 'ca') +
+    buildCompareTable('B', framesB, diffMap, 'cb');
+
+  document.getElementById('cmp-messages').innerHTML =
+    `<div class="compare-col"><div class="col-header"><span class="col-badge ca">A</span><span class="col-name">${escapeHtml(state.fileA.name)}</span></div>${renderMessages(framesA, false)}</div>` +
+    `<div class="compare-col"><div class="col-header"><span class="col-badge cb">B</span><span class="col-name">${escapeHtml(state.fileB.name)}</span></div>${renderMessages(framesB, false)}</div>`;
+
+  // Sync scroll on frames
+  const scrolls = document.getElementById('cmp-frames').querySelectorAll('.compare-sync-scroll');
+  if (scrolls.length === 2) {
+    let lock = false;
+    const sync = (src, dst) => { if (lock) return; lock = true; dst.scrollTop = src.scrollTop; dst.scrollLeft = src.scrollLeft; lock = false; };
+    scrolls[0].addEventListener('scroll', () => sync(scrolls[0], scrolls[1]));
+    scrolls[1].addEventListener('scroll', () => sync(scrolls[1], scrolls[0]));
+  }
+
+  // Compare sub-tab switcher
+  const subBar = container.querySelector('.tab-bar');
+  bindTabSwitcher(subBar, (tab) => {
+    const which = tab.dataset.cmpTab;
+    document.getElementById('cmp-frames').classList.toggle('hidden', which !== 'frames');
+    document.getElementById('cmp-messages').classList.toggle('hidden', which !== 'messages');
+  });
+}
+
+function buildCompareTable(label, frames, diffMap, badgeCls) {
+  const file = label === 'A' ? state.fileA : state.fileB;
+  let html = `<div class="compare-col">
+    <div class="col-header"><span class="col-badge ${badgeCls}">${label}</span><span class="col-name">${escapeHtml(file.name)}</span></div>
+    <div class="compare-sync-scroll">
+    <table class="frame-table">
+      <thead><tr><th>#</th><th>Dir</th><th>Type</th><th>Data</th></tr></thead><tbody>`;
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    if (!f) {
+      html += `<tr><td>${i}</td><td colspan="3" style="color:var(--text-dim);opacity:0.5">—</td></tr>`;
+      continue;
+    }
+    const diffKey = label + '_' + i;
+    const isDiff = diffMap[diffKey];
+    const dirClass = f.isTx ? 'dir-tx' : 'dir-rx';
+    const dirLabel = f.isTx ? 'THẺ→ĐỌC' : 'ĐỌC→THẺ';
+    const hexStr = buildHexStr(f);
+    const typeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
+    html += `<tr class="${isDiff ? 'frame-diff' : ''}">
+      <td>${f.index}</td>
+      <td><span class="${dirClass}">${dirLabel}</span></td>
+      <td class="${typeClass}">${f.frameType}</td>
+      <td class="hex-bytes"><span class="byte-val">${hexStr}</span></td>
+    </tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+  return html;
+}
+
+// ============================================================
+//  Render: LF Compare (overlaid / stacked waveform)
+// ============================================================
+function renderLFCompare(containerId) {
+  const container = document.getElementById(containerId);
+  const u8a = state.fileA.u8;
+  const u8b = state.fileB.u8;
+  container.innerHTML = `<div class="compare-toolbar">
+    <span class="compare-legend"><span class="swatch" style="background:var(--accent)"></span> File A</span>
+    <span class="compare-legend"><span class="swatch" style="background:var(--green)"></span> File B</span>
+    <label class="ml-auto">Zoom <input type="range" id="cmp-zoom" min="1" max="200" value="100" style="width:120px;accent-color:var(--accent)"></label>
+    <label><input type="checkbox" id="cmp-fit" checked> Auto-fit</label>
+    <label><input type="checkbox" id="cmp-stacked"> Stacked</label>
+  </div>
+  <div class="waveform-compare" id="cmp-wave-box">
+    <canvas id="cmp-canvas-a"></canvas>
+    <canvas id="cmp-canvas-b" class="hidden"></canvas>
+  </div>
+  <div class="waveform-stats" id="cmp-stats"></div>`;
+
+  const box = document.getElementById('cmp-wave-box');
+  const canvasA = document.getElementById('cmp-canvas-a');
+  const canvasB = document.getElementById('cmp-canvas-b');
+  const zoomSlider = document.getElementById('cmp-zoom');
+  const fitCheck = document.getElementById('cmp-fit');
+  const stackedCheck = document.getElementById('cmp-stacked');
+
+  function draw() {
+    const rect = box.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = rect.width;
+    const fullH = rect.height;
+
+    const stacked = stackedCheck.checked;
+    const halfH = Math.floor(fullH / 2);
+    const aH = stacked ? halfH : fullH;
+    const bH = stacked ? halfH : fullH;
+
+    canvasA.width = w * dpr; canvasA.height = aH * dpr;
+    canvasA.style.width = w + 'px'; canvasA.style.height = aH + 'px';
+    canvasB.width = w * dpr; canvasB.height = bH * dpr;
+    canvasB.style.width = w + 'px'; canvasB.style.height = bH + 'px';
+    canvasB.classList.toggle('hidden', !stacked);
+    canvasB.style.top = stacked ? halfH + 'px' : '0px';
+
+    const ctxA = canvasA.getContext('2d');
+    const ctxB = canvasB.getContext('2d');
+    const zoomVal = parseInt(zoomSlider.value);
+    const autoFit = fitCheck.checked;
+
+    if (stacked) {
+      drawWaveform(ctxA, u8a, '#7c9cff',
+        ['rgba(124,156,255,0.28)', 'rgba(124,156,255,0)'],
+        { w, h: aH, dpr, offsetY: 0, drawH: aH, zoomVal, autoFit, drawGrid: true, label: 'File A' });
+      drawWaveform(ctxB, u8b, '#4ade80',
+        ['rgba(74,222,128,0.26)', 'rgba(74,222,128,0)'],
+        { w, h: bH, dpr, offsetY: 0, drawH: bH, zoomVal, autoFit, drawGrid: true, label: 'File B' });
+    } else {
+      // Overlay: draw A then B onto the same canvas
+      ctxA.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxA.clearRect(0, 0, w, fullH);
+      // light grid
+      ctxA.strokeStyle = 'rgba(255,255,255,0.04)'; ctxA.lineWidth = 0.5;
+      for (let y = 0; y <= 4; y++) { const yy = 6 + ((fullH - 12) / 4) * y; ctxA.beginPath(); ctxA.moveTo(0, yy); ctxA.lineTo(w, yy); ctxA.stroke(); }
+      const overlay = (u8, color, fill, labelAtBottom) => {
+        if (u8.length === 0) return;
+        const { start, end } = getViewRange(u8, zoomVal, autoFit);
+        const { yMin, yMax, yRange } = valueRange(u8, start, end);
+        const pad = 6, innerH = fullH - pad * 2;
+        const step = w / (end - start - 1 || 1);
+        const pts = [];
+        for (let j = start; j < end; j++) {
+          const x = (j - start) * step;
+          const norm = (u8[j] - yMin) / yRange;
+          pts.push([x, pad + innerH * (1 - norm)]);
+        }
+        // fill
+        if (pts.length > 1) {
+          const grad = ctxA.createLinearGradient(0, 0, 0, fullH);
+          grad.addColorStop(0, fill[0]); grad.addColorStop(1, fill[1]);
+          ctxA.beginPath(); ctxA.moveTo(pts[0][0], fullH);
+          for (const [x, y] of pts) ctxA.lineTo(x, y);
+          ctxA.lineTo(pts[pts.length - 1][0], fullH); ctxA.closePath();
+          ctxA.fillStyle = grad; ctxA.fill();
+        }
+        ctxA.beginPath(); ctxA.strokeStyle = color; ctxA.lineWidth = 1.1;
+        for (let i = 0; i < pts.length; i++) i === 0 ? ctxA.moveTo(pts[i][0], pts[i][1]) : ctxA.lineTo(pts[i][0], pts[i][1]);
+        ctxA.stroke();
+        ctxA.fillStyle = 'rgba(154,160,184,0.85)'; ctxA.font = '11px monospace';
+        ctxA.fillText(labelAtBottom ? 'File B' : 'File A', 6, labelAtBottom ? fullH - 5 : 14);
+      };
+      overlay(u8a, 'rgba(124,156,255,0.85)', ['rgba(124,156,255,0.16)', 'rgba(124,156,255,0)'], false);
+      overlay(u8b, 'rgba(74,222,128,0.85)', ['rgba(74,222,128,0.14)', 'rgba(74,222,128,0)'], true);
+    }
+
+    document.getElementById('cmp-stats').textContent =
+      `File A: ${u8a.length} samples | File B: ${u8b.length} samples | ${stacked ? 'Stacked' : 'Overlaid'} view`;
+  }
+
+  zoomSlider.addEventListener('input', draw);
+  fitCheck.addEventListener('change', draw);
+  stackedCheck.addEventListener('change', draw);
+  window.addEventListener('resize', draw);
+  requestAnimationFrame(draw);
+}
+
+// ============================================================
+//  Main orchestrator: decide tab set based on loaded files
+// ============================================================
+function renderCurrentView() {
+  const data = slotData(state.currentView);
+  if (!data) {
+    document.getElementById('tabs').classList.add('hidden');
+    return;
+  }
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.classList.remove('hidden');
+  tabsEl.style.display = 'block';
+
+  const bothHF = state.fileA && state.fileB && state.fileA.type === 'hf' && state.fileB.type === 'hf';
+  const bothLF = state.fileA && state.fileB && state.fileA.type === 'lf' && state.fileB.type === 'lf';
+  const canCompare = bothHF || bothLF;
+
+  const tabBar = document.getElementById('tabBar');
+  const panels = document.getElementById('panels');
+
+  if (canCompare) {
+    tabBar.innerHTML = `
+      <div class="tab active" data-panel="single">File ${state.currentView}</div>
+      <div class="tab" data-panel="compare">Compare</div>`;
+    panels.innerHTML = `
+      <div class="panel active" id="panel-single"></div>
+      <div class="panel" id="panel-compare"></div>`;
+
+    if (data.type === 'hf') renderSingleHFInto('panel-single', data.frames);
+    else renderSingleLF(data.u8, 'panel-single', state.currentView);
+
+    if (bothHF) renderHFCompare('panel-compare');
+    else if (bothLF) renderLFCompare('panel-compare');
+
+    bindTabSwitcher(tabBar, (tab) => {
+      const panelId = 'panel-' + tab.dataset.panel;
+      panels.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(panelId).classList.add('active');
+    });
+  } else {
+    if (data.type === 'hf') {
+      tabBar.innerHTML = `
+        <div class="tab active" data-panel="frames">Frames</div>
+        <div class="tab" data-panel="messages">Messages</div>`;
+      panels.innerHTML = `
+        <div class="panel active" id="panel-frames"></div>
+        <div class="panel" id="panel-messages"></div>`;
+      renderSingleHFInto('panel-frames', data.frames, { messagesInto: 'panel-messages' });
+      bindTabSwitcher(tabBar, (tab) => {
+        const panelId = 'panel-' + tab.dataset.panel;
+        panels.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(panelId).classList.add('active');
+      });
+    } else {
+      tabBar.innerHTML = '<div class="tab active" data-panel="waveform">Waveform</div>';
+      panels.innerHTML = `<div class="panel active" id="panel-waveform"></div>`;
+      renderSingleLF(data.u8, 'panel-waveform', state.currentView);
+    }
+  }
+}
+
+// Render the HF single-file content. If opts.messagesInto is given, render
+// the messages view into that container too; otherwise build internal sub-tabs.
+function renderSingleHFInto(containerId, frames, opts) {
+  const container = document.getElementById(containerId);
+  if (opts && opts.messagesInto) {
+    buildFrameTable(container, frames, 'detail');
+    document.getElementById(opts.messagesInto).innerHTML = renderMessages(frames, true);
+    return;
+  }
+  // Sub-tab layout (used inside compare's "single" panel)
+  const uid = 's' + Math.random().toString(36).slice(2, 9);
+  container.innerHTML = `
+    <div class="tab-bar" id="stb-${uid}">
+      <div class="tab active" data-sp="frames-${uid}">Frames</div>
+      <div class="tab" data-sp="messages-${uid}">Messages</div>
+    </div>
+    <div class="panel active" id="frames-${uid}"></div>
+    <div class="panel" id="messages-${uid}"></div>`;
+  buildFrameTable(document.getElementById('frames-' + uid), frames, 'detail-' + uid);
+  document.getElementById('messages-' + uid).innerHTML = renderMessages(frames, true);
+  bindTabSwitcher(document.getElementById('stb-' + uid), (tab) => {
+    container.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(tab.dataset.sp).classList.add('active');
+  });
+}
+
+// ============================================================
+//  Small util
+// ============================================================
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+// ============================================================
+//  Process & render file into a slot
+// ============================================================
+function processFile(file, slot) {
+  hideError();
+  slot = slot || nextEmptySlot();
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const u8 = new Uint8Array(e.target.result);
+      if (u8.length === 0) throw new Error('File is empty.');
+      const type = detectFileType(u8);
+      let frames = null;
+      let extra = null;
+      if (type === 'hf') {
+        frames = parseHFSniff(u8);
+        extra = { 'Frames': frames.length };
+      } else {
+        extra = { 'Samples': u8.length, 'Duration': `${(u8.length * 8 / 1000).toFixed(1)} ms` };
+      }
+      setSlot(slot, { name: file.name, u8, type, frames, extra });
+      state.currentView = slot;
+      renderSlotBar();
+      showFileInfo();
+      updateStatus();
+      renderCurrentView();
+    } catch (err) {
+      showError('Error: ' + err.message);
+    }
+  };
+  reader.onerror = function() { showError('Error reading file.'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBox');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  el.style.display = 'block';
+}
+function hideError() {
+  const el = document.getElementById('errorBox');
+  el.classList.add('hidden');
+  el.style.display = 'none';
+}
+
+// ============================================================
+//  Drag & drop + click wiring
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileInputB = document.getElementById('fileInputB');
+
+dropZone.addEventListener('click', (e) => {
+  if (e.target.closest('.slot-load-btn')) return;
+  if (slotCount() >= 2) { loadFileSlot('A'); return; }
+  fileInput.click();
+});
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length === 0) return;
+  if (files.length >= 2) {
+    processFile(files[0], 'A');
+    setTimeout(() => processFile(files[1], 'B'), 50);
+  } else {
+    processFile(files[0], nextEmptySlot() || 'A');
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) {
+    const files = fileInput.files;
+    if (files.length >= 2) {
+      processFile(files[0], 'A');
+      setTimeout(() => processFile(files[1], 'B'), 50);
+    } else {
+      processFile(files[0], nextEmptySlot() || 'A');
+    }
+    fileInput.value = '';
+  }
+});
+
+fileInputB.addEventListener('change', () => {
+  if (fileInputB.files.length > 0) {
+    processFile(fileInputB.files[0], state.activeSlot);
+    fileInputB.value = '';
+  }
+});
+
+updateStatus();
+</script>
+</body>
+</html>
