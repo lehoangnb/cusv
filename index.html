@@ -157,6 +157,17 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.45; }
   }
+  .topbar .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .lang-switcher { display: flex; align-items: center; gap: 2px; }
+  .lang-btn {
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; padding: 2px 6px; border-radius: var(--r-sm);
+    font-family: inherit; font-size: 0.7rem;
+    transition: color 0.18s var(--ease), background 0.18s var(--ease);
+  }
+  .lang-btn:hover { color: var(--text-dim); background: var(--surface-2); }
+  .lang-btn.active { color: var(--accent); font-weight: 600; }
+  .lang-sep { color: var(--text-faint); user-select: none; }
 
   .subtitle {
     color: var(--text-dim);
@@ -757,18 +768,25 @@
     <div class="logo">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12L7 12"/><path d="M7 12L7 7"/><path d="M7 7H12"/><path d="M12 7L12 12"/><path d="M12 12L17 12"/><path d="M17 12L17 17"/><path d="M17 17H22"/><path d="M22 17L22 12"/><path d="M22 12L22 7"/><path d="M22 7H17"/><path d="M17 7L17 2"/><path d="M12 2H7"/><path d="M7 2L7 7"/></svg>
     </div>
-    <h1>Sniff Viewer <small>for ChameleonUltra .bin files</small></h1>
-    <div class="topbar-status">
-      <span class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">No file loaded</span></span>
+    <h1 id="siteTitle" data-i18n="siteTitle">Sniff Viewer <small>for ChameleonUltra .bin files</small></h1>
+    <div class="topbar-right">
+      <div class="lang-switcher" id="langSwitcher">
+        <button class="lang-btn active" data-lang="en" id="langBtnEn">EN</button>
+        <span class="lang-sep">|</span>
+        <button class="lang-btn" data-lang="vi" id="langBtnVi">VI</button>
+      </div>
+      <div class="topbar-status">
+        <span class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText" data-i18n="noFileLoaded">No file loaded</span></span>
+      </div>
     </div>
   </header>
 
-  <p class="subtitle">Drop an HF or LF sniff dump to inspect frames or ADC waveform &mdash; drop 1 or 2 files to compare.</p>
+  <p class="subtitle" data-i18n="subtitle">Drop an HF or LF sniff dump to inspect frames or ADC waveform &mdash; drop 1 or 2 files to compare.</p>
 
   <div class="drop-zone" id="dropZone">
     <div class="drop-zone-icon">&#x1F4E1;</div>
-    <div class="drop-zone-label">Drop <strong>.bin</strong> files here or <strong>click to browse</strong></div>
-    <div class="drop-zone-hint">Supports LF Sniff (raw ADC) &amp; HF 14A Sniff (packed frames)</div>
+    <div class="drop-zone-label" data-i18n="dropZoneLabel">Drop <strong>.bin</strong> files here or <strong>click to browse</strong></div>
+    <div class="drop-zone-hint" data-i18n="dropZoneHint">Supports LF Sniff (raw ADC) &amp; HF 14A Sniff (packed frames)</div>
     <input type="file" id="fileInput" accept=".bin,.dump" multiple>
   </div>
 
@@ -793,7 +811,334 @@ const state = {
   fileB: null,
   activeSlot: 'A',   // next drop / explicit load goes here
   currentView: 'A',  // which file is shown in single-file tabs
+  lang: 'en',
 };
+
+const translations = {
+  en: {
+    siteTitle: 'Sniff Viewer <small>for ChameleonUltra .bin files</small>',
+    subtitle: 'Drop an HF or LF sniff dump to inspect frames or ADC waveform &mdash; drop 1 or 2 files to compare.',
+    dropZoneLabel: 'Drop <strong>.bin</strong> files here or <strong>click to browse</strong>',
+    dropZoneHint: 'Supports LF Sniff (raw ADC) &amp; HF 14A Sniff (packed frames)',
+    noFileLoaded: 'No file loaded',
+    oneFileLoaded: '1 file loaded',
+    twoFilesLoaded: '2 files loaded',
+    notLoaded: 'Not loaded',
+    hfType: 'HF 14A',
+    lfType: 'LF ADC',
+    loadFile: '+ Load File',
+    frames: 'Frames',
+    messages: 'Messages',
+    waveform: 'Waveform',
+    compare: 'Compare',
+    noFrames: 'No frames found.',
+    noMessages: 'No messages.',
+    zoom: 'Zoom',
+    autoFit: 'Auto-fit',
+    stacked: 'Stacked',
+    samples: 'samples',
+    fileTotal: 'File {0}: {1} samples total',
+    viewSamples: 'View: {0} samples',
+    range: 'Range: 0x{0}–0x{1}',
+    freq: '~125 kHz',
+    duration: '{0} ms / {1} ms',
+    diffCount: '\u26A0 {0} difference',
+    diffCountPlural: '\u26A0 {0} differences',
+    identicalStructure: '\u2713 Identical frame structure',
+    fileALabel: 'File A',
+    fileBLabel: 'File B',
+    stackedView: 'Stacked',
+    overlaidView: 'Overlaid',
+    fileSlot: 'File {0}',
+    slotStatus: '{0} samples',
+    slotStatusFrames: '{0} frames',
+    loadFileBtn: '+ Load File {0}',
+    errorPrefix: 'Error: ',
+    errorReading: 'Error reading file.',
+    errorEmpty: 'File is empty.',
+    extraFrames: 'Frames',
+    extraSamples: 'Samples',
+    extraDuration: 'Duration',
+    dirTagToReader: 'TAG\u2192RD',
+    dirReaderToTag: 'RD\u2192TAG',
+    senderTag: 'Tag',
+    senderReader: 'Reader',
+    msgNumber: '#{0} \u00B7 {1} bits',
+    colDir: 'Dir',
+    colType: 'Type',
+    colBits: 'Bits',
+    colBytes: 'Bytes',
+    colDataHex: 'Data',
+    colAscii: 'ASCII',
+    descREQATitle: 'REQA (Request command, Type A)',
+    descREQADetail: 'Reader polls for ISO 14443-A cards in the field. Sent continuously when no card is present. Short frame (7 bits), value 0x26. First step of the anti-collision loop.',
+    descWUPATitle: 'WUPA (Wake-UP command, Type A)',
+    descWUPADetail: 'Reader wakes cards in HALT state. Cards in IDLE state ignore this. Short frame (7 bits), value 0x52. Used to reactivate a stopped card without a full anti-collision cycle.',
+    descHALTTitle: 'HLTA (HALT command, Type A)',
+    descHALTDetail: 'Puts the selected card into HALT state. The card stops responding until woken by WUPA or the field is reset. Standard frame: 0x50 0x00 with CRC. Only the currently selected card responds.',
+    descANTICOLLCL1Title: 'ANTI-COLLISION (Cascade 1)',
+    descANTICOLLCL1Detail: 'Reader performs anti-collision to resolve the card UID. Cascade 1 reads UID bytes 0\u20133. Command: {0} (SEL=0x93, NVB={1} bit). Bit-frame anti-collision with Manchester encoding.',
+    descANTICOLLCL2Title: 'ANTI-COLLISION (Cascade 2)',
+    descANTICOLLCL2Detail: 'Anti-collision Cascade 2 \u2014 reads UID bytes 4\u20136. Used for 7-byte UID (double size). Command: {0} (SEL=0x95).',
+    descANTICOLLCL3Title: 'ANTI-COLLISION (Cascade 3)',
+    descANTICOLLCL3Detail: 'Anti-collision Cascade 3 \u2014 reads UID bytes 7\u20139. Used for 10-byte UID (triple size). Command: {0} (SEL=0x97).',
+    descSELECTCL1Title: 'SELECT (Cascade 1)',
+    descSELECTCL1Detail: 'Reader selects the card with the UID resolved in Cascade 1. The card responds with SAK (Select Acknowledge) indicating whether the UID is complete (bit 2 of SAK) and whether ISO 14443-4 is supported (bit 5 of SAK).',
+    descSELECTCL2Title: 'SELECT (Cascade 2)',
+    descSELECTCL2Detail: 'Reader selects the card using the partial UID from Cascade 2. Card responds with SAK. Used when SAK from CL1 indicates incomplete UID.',
+    descSELECTCL3Title: 'SELECT (Cascade 3)',
+    descSELECTCL3Detail: 'Final cascade SELECT for 10-byte UID. After this step, the full UID is known and the card enters ACTIVE state.',
+    descRATSTitle: 'RATS (Request ATS)',
+    descRATSDetail: 'Reader requests ATS (Answer To Select) from the card. First byte is 0xE0, second byte is the FSDI/DRI parameter ({0}). Marks transition from anti-collision loop to ISO 14443-4 transport protocol.',
+    descATSTitle: 'ATS (Answer To Select)',
+    descATSDetail: 'Card responds to RATS with its capabilities: supported data rates (TA1), frame size (FSCI), protocol options (TB1/TC1), and historical bytes. Length: {0} bytes. First byte (TL) indicates the total ATS length.',
+    descPPSTitle: 'PPS (Protocol Parameter Selection)',
+    descPPSDetail: 'Reader proposes communication parameter changes (baud rate, frame size). First byte: {0} (PPSS). Card must echo the exact PPS frame to accept the new parameters.',
+    descAUTHTitle: 'AUTH (MIFARE Classic Authentication)',
+    descAUTHDetail: '{0}: MIFARE Classic authentication command. Key type: {1}. Block: {2}. Initiates the 3-step CRYPTO1 authentication chain. Subsequent 8-byte frames are challenge/response.',
+    descDESELECTTitle: 'DESELECT (Deselect)',
+    descDESELECTDetail: 'Reader deselects the current card, returning it to HALT state. S-block with DESELECT command (0xC2). Card acknowledges with S(WTX) containing the same PCB echoed back.',
+    descWTXTitle: 'WTX (Wait Time Extension)',
+    descWTXDetail: 'S-block requesting wait time extension. The card (or reader) needs more time to process a command. Contains the WTXM multiplier (1\u201359) extending FWT by that factor.',
+    descSBLOCKTitle: 'S-Block (Supervisory Block)',
+    descSBLOCKDetail: 'T=CL supervisory block used for protocol control. PCB: {0}. Used for DESELECT, WTX, and other ISO 14443-4 control functions.',
+    descIBLOCKTitle: 'I-Block (Information Block)',
+    descIBLOCKDetail: 'T=CL application data block. Carries APDU or upper-layer data. PCB: {0} (block number: {1}).{2}{3}',
+    descRBLOCKTitle: 'R-Block (Receive Ready / NAK)',
+    descRBLOCKDetail: 'T=CL acknowledgment block. PCB: {0}. Bit pattern indicates: {1}. Block number: {2}.',
+    descCMD0x26Title: 'Short Frame \u2014 0x26',
+    descCMD0x26Detail: 'Short frame, 7 bits, value 0x26. This is the standard REQA command for polling cards in the field.',
+    descCMD0x52Title: 'Short Frame \u2014 0x52',
+    descCMD0x52Detail: 'Short frame, 7 bits, value 0x52. This is the standard WUPA command for waking stopped cards.',
+    descDATATitle: 'Application Data',
+    descDATADetail: 'Raw data frame \u2014 may carry application-layer data (APDU, NDEF, proprietary), or an unrecognized protocol command. {0} bytes.',
+    descUnknownTitle: 'Unknown Frame',
+    descUnknownDetail: 'Unrecognized frame format. May be incomplete capture, noise, or a non-standard command.',
+    descATQATitle: 'ATQA (Answer To Request Type A)',
+    descATQADetail: 'Card responds to REQA with 2-byte ATQA. High byte ({0}): proprietary platform code. Low byte ({1}): UID bits, anti-collision, chip identifier. MIFARE Classic 1K is typically 0x00 0x04. MIFARE Classic 4K: 0x00 0x02. Ultralight: 0x00 0x44.',
+    descUIDCL1Title: 'UID Cascade 1 (Card Identifier)',
+    descUIDCL1Detail: 'Card sends 4-byte UID + BCC in Cascade 1. UID: {0} {1} {2} {3} (BCC={4}). BCC = UID0 \u2295 UID1 \u2295 UID2 \u2295 UID3.',
+    descUIDCL2Title: 'UID Cascade 2 (Card Identifier, Extension)',
+    descUIDCL2Detail: 'Card sends UID extension in Cascade 2. CT=0x88 + 3 UID bytes + BCC. Full UID is CL1 UID (4 bytes) + CL2 UID (3 bytes) = 7-byte UID.',
+    descUIDTitle: 'UID (Card Identifier)',
+    descUIDDetail: 'Card sends UID identifier. {0} bytes. This is the response after an ANTICOLLISION command.',
+    descAUTHCHALLENGETitle: 'AUTH Challenge (8 bytes)',
+    descAUTHCHALLENGEDetail: 'Reader sends 8-byte challenge block (CRYPTO1 encrypted) after receiving the card nonce. Step 2 of the 3-step MIFARE Classic authentication chain.',
+    descAUTHRESPONSETitle: 'AUTH Response (4 bytes)',
+    descAUTHRESPONSEDetail: 'Card sends 4-byte response (encrypted) to complete CRYPTO1 authentication. If the reader CRC matches, the channel is successfully encrypted.',
+    descCMDTitle: 'Short Frame \u2014 0x{0}',
+    descCMDDetail: 'Short frame, 7 bits, value 0x{0}. Non-standard or manufacturer-specific command code.',
+    descFallbackTitle: '{0}',
+    descFallbackDetail: '{0} bytes of data.',
+    descKeyA: 'Key A',
+    descKeyB: 'Key B',
+    descAuthDirTag: 'TAG\u2192RD',
+    descAuthDirReader: 'RD\u2192TAG',
+    descIBLOCKCid: ' | CID: {0}',
+    descIBLOCKNad: ' | NAD: {0}',
+    descIBLOCKNoCid: '',
+    descIBLOCKNoNad: '',
+    descRBLOCKNak: 'NAK (error, retransmit)',
+    descRBLOCKAck: 'ACK (received OK)',
+    sakTitle: 'SAK (Select Acknowledge) \u2014 0x{0}',
+    sakDetail: 'SAK = 0x{0} ({1}): {2}.{3}',
+    sakFlagBit0: 'Bit0=1 (reserved)',
+    sakFlagBit1: 'Bit1=1 (reserved)',
+    sakFlagUidIncomplete: 'UID incomplete (needs cascade)',
+    sakFlagUidComplete: 'UID complete',
+    sakFlagIsoYes: 'Supports ISO 14443-4 (T=CL)',
+    sakFlagIsoNo: 'Does not support ISO 14443-4',
+    sakFlagBit6: 'Bit6=1 (reserved)',
+    sakFlagBit7: 'Bit7=1 (abnormal)',
+    sakKnown00: 'MIFARE Ultralight / NTAG (or card without ISO 14443-4, 4-byte UID)',
+    sakKnown04: 'MIFARE Ultralight / NTAG (7-byte UID, incomplete)',
+    sakKnown08: 'MIFARE Classic 1K (4-byte UID, no ISO 14443-4)',
+    sakKnown09: 'MIFARE Classic Mini (4-byte UID)',
+    sakKnown18: 'MIFARE Classic 4K (4-byte UID, no ISO 14443-4)',
+    sakKnown20: 'ISO 14443-4 (T=CL) \u2014 4-byte UID, protocol layer 4 support',
+    sakKnown24: 'ISO 14443-4 (T=CL) \u2014 7-byte UID, incomplete',
+    sakKnown28: 'MIFARE Plus (4-byte UID, ISO 14443-4)',
+    sakKnown38: 'MIFARE DESFire (4-byte UID, ISO 14443-4)',
+    phaseAnticoll: 'Anti-Collision &amp; Select Card',
+    phaseActivate: 'Protocol Activation (ISO 14443-4)',
+    phaseAuth: 'MIFARE Classic Authentication (CRYPTO1)',
+    phaseData: 'Data Exchange (T=CL)',
+    phaseEnd: 'Session End',
+    phaseEncrypted: 'Encrypted Data (Post-Auth)',
+  },
+  vi: {
+    siteTitle: 'Sniff Viewer <small>cho tệp .bin ChameleonUltra</small>',
+    subtitle: 'Thả tệp sniff HF hoặc LF để xem khung dữ liệu hoặc dạng sóng ADC &mdash; thả 1 hoặc 2 tệp để so sánh.',
+    dropZoneLabel: 'Thả tệp <strong>.bin</strong> vào đây hoặc <strong>nhấp để duyệt</strong>',
+    dropZoneHint: 'Hỗ trợ LF Sniff (ADC thô) &amp; HF 14A Sniff (khung dữ liệu)',
+    noFileLoaded: 'Chưa tải tệp',
+    oneFileLoaded: 'Đã tải 1 tệp',
+    twoFilesLoaded: 'Đã tải 2 tệp',
+    notLoaded: 'Chưa tải',
+    hfType: 'HF 14A',
+    lfType: 'LF ADC',
+    loadFile: '+ Tải Tệp',
+    frames: 'Khung',
+    messages: 'Tin nhắn',
+    waveform: 'Dạng sóng',
+    compare: 'So sánh',
+    noFrames: 'Không tìm thấy khung.',
+    noMessages: 'Không có tin nhắn.',
+    zoom: 'Thu phóng',
+    autoFit: 'Tự động vừa',
+    stacked: 'Xếp chồng',
+    samples: 'mẫu',
+    fileTotal: 'Tệp {0}: {1} mẫu tổng cộng',
+    viewSamples: 'Xem: {0} mẫu',
+    range: 'Dải: 0x{0}–0x{1}',
+    freq: '~125 kHz',
+    duration: '{0} ms / {1} ms',
+    diffCount: '\u26A0 {0} điểm khác biệt',
+    diffCountPlural: '\u26A0 {0} điểm khác biệt',
+    identicalStructure: '\u2713 Cấu trúc khung giống hệt',
+    fileALabel: 'Tệp A',
+    fileBLabel: 'Tệp B',
+    stackedView: 'Xếp chồng',
+    overlaidView: 'Chồng lên',
+    fileSlot: 'Tệp {0}',
+    slotStatus: '{0} mẫu',
+    slotStatusFrames: '{0} khung',
+    loadFileBtn: '+ Tải Tệp {0}',
+    errorPrefix: 'Lỗi: ',
+    errorReading: 'Lỗi đọc tệp.',
+    errorEmpty: 'Tệp trống.',
+    extraFrames: 'Khung',
+    extraSamples: 'Mẫu',
+    extraDuration: 'Thời lượng',
+    dirTagToReader: 'THẺ\u2192ĐỌC',
+    dirReaderToTag: 'ĐỌC\u2192THẺ',
+    senderTag: 'Thẻ',
+    senderReader: 'Đầu Đọc',
+    msgNumber: '#{0} \u00B7 {1} bit',
+    colDir: 'Hướng',
+    colType: 'Loại',
+    colBits: 'Bit',
+    colBytes: 'Byte',
+    colDataHex: 'Dữ liệu',
+    colAscii: 'ASCII',
+    descREQATitle: 'REQA (Lệnh Yêu Cầu, Loại A)',
+    descREQADetail: 'Đầu đọc quét thẻ ISO 14443-A trong trường. Gửi liên tục khi không có thẻ nào trong trường. Khung ngắn (7 bit), giá trị 0x26. Bước đầu tiên của vòng lặp chống xung đột.',
+    descWUPATitle: 'WUPA (Lệnh Đánh Thức, Loại A)',
+    descWUPADetail: 'Đầu đọc đánh thức các thẻ đang ở trạng thái HALT. Thẻ ở trạng thái IDLE sẽ bỏ qua lệnh này. Khung ngắn (7 bit), giá trị 0x52. Dùng để kích hoạt lại thẻ đã dừng mà không cần chạy lại toàn bộ chu trình chống xung đột.',
+    descHALTTitle: 'HLTA (Lệnh Dừng, Loại A)',
+    descHALTDetail: 'Đưa thẻ đã chọn vào trạng thái HALT. Thẻ ngừng phản hồi cho đến khi được đánh thức bởi WUPA hoặc trường được reset. Khung chuẩn: 0x50 0x00 kèm CRC. Chỉ thẻ hiện đang được chọn mới phản hồi.',
+    descANTICOLLCL1Title: 'CHỐNG XUNG ĐỘT (Cấp 1)',
+    descANTICOLLCL1Detail: 'Đầu đọc thực hiện chống xung đột để phân giải UID của thẻ. Cấp 1 đọc các byte UID 0\u20133. Lệnh: {0} (SEL=0x93, NVB={1} bit). Chống xung đột dạng khung bit với mã hóa Manchester.',
+    descANTICOLLCL2Title: 'CHỐNG XUNG ĐỘT (Cấp 2)',
+    descANTICOLLCL2Detail: 'Chống xung đột Cấp 2 \u2014 đọc byte UID 4\u20136. Dùng cho UID 7 byte (kích thước kép). Lệnh: {0} (SEL=0x95).',
+    descANTICOLLCL3Title: 'CHỐNG XUNG ĐỘT (Cấp 3)',
+    descANTICOLLCL3Detail: 'Chống xung đột Cấp 3 \u2014 đọc byte UID 7\u20139. Dùng cho UID 10 byte (kích thước ba). Lệnh: {0} (SEL=0x97).',
+    descSELECTCL1Title: 'SELECT (Cấp 1)',
+    descSELECTCL1Detail: 'Đầu đọc chọn thẻ với UID đã phân giải ở Cấp 1. Thẻ phản hồi bằng SAK (Select Acknowledge) cho biết UID đã hoàn chỉnh chưa (bit 2 của SAK) và có hỗ trợ ISO 14443-4 không (bit 5 của SAK).',
+    descSELECTCL2Title: 'SELECT (Cấp 2)',
+    descSELECTCL2Detail: 'Đầu đọc chọn thẻ dùng UID một phần từ Cấp 2. Thẻ phản hồi bằng SAK. Dùng khi SAK từ CL1 cho biết UID chưa hoàn chỉnh.',
+    descSELECTCL3Title: 'SELECT (Cấp 3)',
+    descSELECTCL3Detail: 'Lệnh chọn cấp cuối cùng cho UID 10 byte. Sau bước này, toàn bộ UID đã được biết và thẻ ở trạng thái ACTIVE.',
+    descRATSTitle: 'RATS (Yêu Cầu ATS)',
+    descRATSDetail: 'Đầu đọc yêu cầu ATS (Answer To Select) từ thẻ. Byte đầu là 0xE0, byte thứ hai là tham số FSDI/DRI ({0}). Đánh dấu bước chuyển từ vòng lặp chống xung đột sang giao thức truyền tải ISO 14443-4.',
+    descATSTitle: 'ATS (Trả Lời ATS)',
+    descATSDetail: 'Thẻ phản hồi RATS với các khả năng của mình: tốc độ dữ liệu hỗ trợ (TA1), kích thước khung (FSCI), tùy chọn giao thức (TB1/TC1), và tùy chọn khối byte lịch sử. Độ dài: {0} byte. Byte đầu tiên (TL) cho biết tổng độ dài ATS.',
+    descPPSTitle: 'PPS (Lựa Chọn Tham Số Giao Thức)',
+    descPPSDetail: 'Đầu đọc đề xuất thay đổi tham số giao tiếp (tốc độ baud, kích thước khung). Byte đầu: {0} (PPSS). Thẻ phải phản hồi chính xác khung PPS để chấp nhận tham số mới.',
+    descAUTHTitle: 'AUTH (Xác Thực MIFARE Classic)',
+    descAUTHDetail: '{0}: Lệnh xác thực MIFARE Classic. Loại khóa: {1}. Block: {2}. Khởi tạo chuỗi xác thực CRYPTO1 3 bước. Các khung 8 byte tiếp theo là thử thách/phản hồi.',
+    descDESELECTTitle: 'DESELECT (Hủy Chọn)',
+    descDESELECTDetail: 'Đầu đọc hủy chọn thẻ hiện tại, đưa thẻ về trạng thái HALT. Khối S với lệnh DESELECT (0xC2). Thẻ xác nhận bằng S(WTX) chứa PCB tương tự được phản hồi lại.',
+    descWTXTitle: 'WTX (Gia Hạn Thời Gian Chờ)',
+    descWTXDetail: 'Khối S yêu cầu gia hạn thời gian chờ. Thẻ (hoặc đầu đọc) cần thêm thời gian để xử lý lệnh. Chứa hệ số nhân WTXM (1\u201359) kéo dài FWT theo hệ số đó.',
+    descSBLOCKTitle: 'S-Block (Khối Giám Sát)',
+    descSBLOCKDetail: 'Khối giám sát T=CL dùng cho điều khiển giao thức. PCB: {0}. Dùng cho DESELECT, WTX, và các chức năng điều khiển ISO 14443-4 khác.',
+    descIBLOCKTitle: 'I-Block (Khối Thông Tin)',
+    descIBLOCKDetail: 'Khối dữ liệu ứng dụng T=CL. Mang APDU hoặc dữ liệu lớp trên. PCB: {0} (số khối: {1}).{2}{3}',
+    descRBLOCKTitle: 'R-Block (Sẵn Sàng Nhận / NAK)',
+    descRBLOCKDetail: 'Khối xác nhận T=CL. PCB: {0}. Mẫu bit cho biết: {1}. Số khối: {2}.',
+    descCMD0x26Title: 'Khung Ngắn \u2014 0x26',
+    descCMD0x26Detail: 'Khung ngắn, 7 bit, giá trị 0x26. Đây là lệnh REQA tiêu chuẩn để quét thẻ trong trường.',
+    descCMD0x52Title: 'Khung Ngắn \u2014 0x52',
+    descCMD0x52Detail: 'Khung ngắn, 7 bit, giá trị 0x52. Đây là lệnh WUPA tiêu chuẩn để đánh thức thẻ đã dừng.',
+    descDATATitle: 'Dữ Liệu Ứng Dụng',
+    descDATADetail: 'Khung dữ liệu thô \u2014 có thể là dữ liệu lớp ứng dụng (APDU, NDEF, độc quyền), hoặc lệnh giao thức không nhận dạng được. {0} byte.',
+    descUnknownTitle: 'Khung Không Xác Định',
+    descUnknownDetail: 'Định dạng khung không nhận dạng được. Có thể là thu thập không đầy đủ, nhiễu, hoặc lệnh không chuẩn.',
+    descATQATitle: 'ATQA (Answer To Request Type A)',
+    descATQADetail: 'Thẻ phản hồi REQA với 2 byte ATQA. Byte cao ({0}): mã nền tảng độc quyền. Byte thấp ({1}): các bit UID, chống xung đột, định danh chip. MIFARE Classic 1K thường là 0x00 0x04. MIFARE Classic 4K: 0x00 0x02. Ultralight: 0x00 0x44.',
+    descUIDCL1Title: 'UID Cấp 1 (Định Danh Thẻ)',
+    descUIDCL1Detail: 'Thẻ gửi UID 4 byte + BCC tại Cấp 1. UID: {0} {1} {2} {3} (BCC={4}). BCC = UID0 \u2295 UID1 \u2295 UID2 \u2295 UID3.',
+    descUIDCL2Title: 'UID Cấp 2 (Định Danh Thẻ, Phần Mở Rộng)',
+    descUIDCL2Detail: 'Thẻ gửi phần mở rộng UID tại Cấp 2. Byte CT=0x88 + 3 byte UID + BCC. UID đầy đủ là UID CL1 (4 byte) + UID CL2 (3 byte) = UID 7 byte.',
+    descUIDTitle: 'UID (Định Danh Thẻ)',
+    descUIDDetail: 'Thẻ gửi định danh UID. {0} byte. Đây là phản hồi sau lệnh ANTICOLLISION.',
+    descAUTHCHALLENGETitle: 'AUTH Thử Thách (8 byte)',
+    descAUTHCHALLENGEDetail: 'Đầu đọc gửi khối thử thách 8 byte (đã mã hóa CRYPTO1) sau khi nhận nonce từ thẻ. Đây là bước thứ 2 trong chuỗi xác thực 3 bước của MIFARE Classic.',
+    descAUTHRESPONSETitle: 'AUTH Phản Hồi (4 byte)',
+    descAUTHRESPONSEDetail: 'Thẻ gửi phản hồi 4 byte (đã mã hóa) để hoàn tất xác thực CRYPTO1. Nếu CRC của đầu đọc khớp, kênh truyền đã được mã hóa thành công.',
+    descCMDTitle: 'Khung Ngắn \u2014 0x{0}',
+    descCMDDetail: 'Khung ngắn, 7 bit, giá trị 0x{0}. Mã lệnh không chuẩn hoặc dành riêng cho nhà sản xuất.',
+    descFallbackTitle: '{0}',
+    descFallbackDetail: '{0} byte dữ liệu.',
+    descKeyA: 'Khóa A',
+    descKeyB: 'Khóa B',
+    descAuthDirTag: 'TAG\u2192RD',
+    descAuthDirReader: 'RD\u2192TAG',
+    descIBLOCKCid: ' | CID: {0}',
+    descIBLOCKNad: ' | NAD: {0}',
+    descIBLOCKNoCid: '',
+    descIBLOCKNoNad: '',
+    descRBLOCKNak: 'NAK (lỗi, yêu cầu truyền lại)',
+    descRBLOCKAck: 'ACK (đã nhận OK)',
+    sakTitle: 'SAK (Select Acknowledge) \u2014 0x{0}',
+    sakDetail: 'SAK = 0x{0} ({1}): {2}.{3}',
+    sakFlagBit0: 'Bit0=1 (dành riêng)',
+    sakFlagBit1: 'Bit1=1 (dành riêng)',
+    sakFlagUidIncomplete: 'UID chưa hoàn chỉnh (cần cấp tiếp theo)',
+    sakFlagUidComplete: 'UID đã hoàn chỉnh',
+    sakFlagIsoYes: 'Hỗ trợ ISO 14443-4 (T=CL)',
+    sakFlagIsoNo: 'Không hỗ trợ ISO 14443-4',
+    sakFlagBit6: 'Bit6=1 (dành riêng)',
+    sakFlagBit7: 'Bit7=1 (bất thường)',
+    sakKnown00: 'Thẻ MIFARE Ultralight / NTAG (hoặc thẻ không hỗ trợ ISO 14443-4, UID 4 byte)',
+    sakKnown04: 'Thẻ MIFARE Ultralight / NTAG (UID 7 byte, chưa hoàn chỉnh)',
+    sakKnown08: 'Thẻ MIFARE Classic 1K (UID 4 byte, không ISO 14443-4)',
+    sakKnown09: 'Thẻ MIFARE Classic Mini (UID 4 byte)',
+    sakKnown18: 'Thẻ MIFARE Classic 4K (UID 4 byte, không ISO 14443-4)',
+    sakKnown20: 'Thẻ ISO 14443-4 (T=CL) \u2014 UID 4 byte, hỗ trợ giao thức lớp 4',
+    sakKnown24: 'Thẻ ISO 14443-4 (T=CL) \u2014 UID 7 byte, chưa hoàn chỉnh',
+    sakKnown28: 'Thẻ MIFARE Plus (UID 4 byte, ISO 14443-4)',
+    sakKnown38: 'Thẻ MIFARE DESFire (UID 4 byte, ISO 14443-4)',
+    phaseAnticoll: 'Chống Xung Đột &amp; Chọn Thẻ',
+    phaseActivate: 'Kích Hoạt Giao Thức (ISO 14443-4)',
+    phaseAuth: 'Xác Thực MIFARE Classic (CRYPTO1)',
+    phaseData: 'Trao Đổi Dữ Liệu (T=CL)',
+    phaseEnd: 'Kết Thúc Phiên',
+    phaseEncrypted: 'Dữ Liệu Mã Hóa (Sau Xác Thực)',
+  }
+};
+
+function t(key, ...args) {
+  let str = (translations[state.lang] || translations.en)[key] || key;
+  if (args.length) {
+    args.forEach((arg, i) => { str = str.replace(new RegExp('\\{' + i + '\\}', 'g'), arg); });
+  }
+  return str;
+}
+
+function setLang(lang) {
+  state.lang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18n);
+  });
+  updateStatus();
+  showFileInfo();
+  renderSlotBar();
+  renderCurrentView();
+}
 
 function slotData(slot) { return slot === 'A' ? state.fileA : state.fileB; }
 function setSlot(slot, data) { slot === 'A' ? (state.fileA = data) : (state.fileB = data); }
@@ -906,31 +1251,22 @@ function buildSAKDescription(hexVal) {
   const val = parseInt(hexVal, 16);
   const flags = [];
 
-  if (val & 0x01) flags.push('Bit0=1 (dành riêng)');
-  if (val & 0x02) flags.push('Bit1=1 (dành riêng)');
-  if (val & 0x04) flags.push('UID chưa hoàn chỉnh (cần cấp tiếp theo)');
-  else flags.push('UID đã hoàn chỉnh');
-  if (val & 0x20) flags.push('Hỗ trợ ISO 14443-4 (T=CL)');
-  else flags.push('Không hỗ trợ ISO 14443-4');
-  if (val & 0x40) flags.push('Bit6=1 (dành riêng)');
-  if (val & 0x80) flags.push('Bit7=1 (bất thường)');
+  if (val & 0x01) flags.push(t('sakFlagBit0'));
+  if (val & 0x02) flags.push(t('sakFlagBit1'));
+  if (val & 0x04) flags.push(t('sakFlagUidIncomplete'));
+  else flags.push(t('sakFlagUidComplete'));
+  if (val & 0x20) flags.push(t('sakFlagIsoYes'));
+  else flags.push(t('sakFlagIsoNo'));
+  if (val & 0x40) flags.push(t('sakFlagBit6'));
+  if (val & 0x80) flags.push(t('sakFlagBit7'));
 
-  const knownSAK = {
-    '00': 'Thẻ MIFARE Ultralight / NTAG (hoặc thẻ không hỗ trợ ISO 14443-4, UID 4 byte)',
-    '04': 'Thẻ MIFARE Ultralight / NTAG (UID 7 byte, chưa hoàn chỉnh)',
-    '08': 'Thẻ MIFARE Classic 1K (UID 4 byte, không ISO 14443-4)',
-    '09': 'Thẻ MIFARE Classic Mini (UID 4 byte)',
-    '18': 'Thẻ MIFARE Classic 4K (UID 4 byte, không ISO 14443-4)',
-    '20': 'Thẻ ISO 14443-4 (T=CL) — UID 4 byte, hỗ trợ giao thức lớp 4',
-    '24': 'Thẻ ISO 14443-4 (T=CL) — UID 7 byte, chưa hoàn chỉnh',
-    '28': 'Thẻ MIFARE Plus (UID 4 byte, ISO 14443-4)',
-    '38': 'Thẻ MIFARE DESFire (UID 4 byte, ISO 14443-4)',
-  };
+  const knownKey = 'sakKnown' + hexVal.toLowerCase().padStart(2, '0');
+  const known = t(knownKey);
+  const hasKnown = known !== knownKey;
 
-  const known = knownSAK[hexVal.toLowerCase()] || null;
-  let title = `SAK (Select Acknowledge) — 0x${hexVal.toUpperCase()}`;
-  let detail = `SAK = 0x${hexVal.toUpperCase()} (${val}): ` + flags.join(' | ') + '.';
-  if (known) detail += ' ' + known + '.';
+  const title = t('sakTitle', hexVal.toUpperCase());
+  let detail = t('sakDetail', hexVal.toUpperCase(), val, flags.join(' | '), '');
+  if (hasKnown) detail = t('sakDetail', hexVal.toUpperCase(), val, flags.join(' | '), ' ' + known + '.');
   return { title, detail };
 }
 
@@ -938,176 +1274,95 @@ function buildSAKDescription(hexVal) {
 //  Frame type detail descriptions (ISO 14443-A)
 // ============================================================
 function describeFrame(f) {
-  const t = f.frameType;
+  const ft = f.frameType;
   const d = f.data;
-
   const hex = (b) => '0x' + (b != null ? b.toString(16).padStart(2,'0').toUpperCase() : '??');
 
-  // Static descriptions (may use f / d at call-time)
-  const descriptions = {
-    'REQA': {
-      title: 'REQA (Lệnh Yêu Cầu, Loại A)',
-      detail: 'Đầu đọc quét thẻ ISO 14443-A trong trường. Gửi liên tục khi không có thẻ nào trong trường. ' +
-              'Khung ngắn (7 bit), giá trị 0x26. Bước đầu tiên của vòng lặp chống xung đột.',
-    },
-    'WUPA': {
-      title: 'WUPA (Lệnh Đánh Thức, Loại A)',
-      detail: 'Đầu đọc đánh thức các thẻ đang ở trạng thái HALT. Thẻ ở trạng thái IDLE sẽ bỏ qua lệnh này. ' +
-              'Khung ngắn (7 bit), giá trị 0x52. Dùng để kích hoạt lại thẻ đã dừng mà không cần chạy lại toàn bộ chu trình chống xung đột.',
-    },
-    'HALT': {
-      title: 'HLTA (Lệnh Dừng, Loại A)',
-      detail: 'Đưa thẻ đã chọn vào trạng thái HALT. Thẻ ngừng phản hồi cho đến khi được đánh thức bởi WUPA hoặc trường được reset. ' +
-              'Khung chuẩn: 0x50 0x00 kèm CRC. Chỉ thẻ hiện đang được chọn mới phản hồi.',
-    },
-    'ANTICOLL_CL1': {
-      title: 'CHỐNG XUNG ĐỘT (Cấp 1)',
-      detail: `Đầu đọc thực hiện chống xung đột để phân giải UID của thẻ. Cấp 1 đọc các byte UID 0–3. ` +
-              `Lệnh: ${hex(d[0])} ` +
-              `(SEL=0x93, NVB=${
-                d[0] != null ? ((d[0] & 0x0F) < 7 ? (d[0] & 0x0F) * 8 : (d[0] & 0x0F) * 8 + 8) : '?'
-              } bit). Chống xung đột dạng khung bit với mã hóa Manchester.`,
-    },
-    'ANTICOLL_CL2': {
-      title: 'CHỐNG XUNG ĐỘT (Cấp 2)',
-      detail: `Chống xung đột Cấp 2 — đọc byte UID 4–6. Dùng cho UID 7 byte (kích thước kép). ` +
-              `Lệnh: ${hex(d[0])} (SEL=0x95).`,
-    },
-    'ANTICOLL_CL3': {
-      title: 'CHỐNG XUNG ĐỘT (Cấp 3)',
-      detail: `Chống xung đột Cấp 3 — đọc byte UID 7–9. Dùng cho UID 10 byte (kích thước ba). ` +
-              `Lệnh: ${hex(d[0])} (SEL=0x97).`,
-    },
-    'SELECT_CL1': {
-      title: 'SELECT (Cấp 1)',
-      detail: `Đầu đọc chọn thẻ với UID đã phân giải ở Cấp 1. Thẻ phản hồi bằng SAK (Select Acknowledge) ` +
-              `cho biết UID đã hoàn chỉnh chưa (bit 2 của SAK) và có hỗ trợ ISO 14443-4 không (bit 5 của SAK).`,
-    },
-    'SELECT_CL2': {
-      title: 'SELECT (Cấp 2)',
-      detail: `Đầu đọc chọn thẻ dùng UID một phần từ Cấp 2. Thẻ phản hồi bằng SAK. ` +
-              `Dùng khi SAK từ CL1 cho biết UID chưa hoàn chỉnh.`,
-    },
-    'SELECT_CL3': {
-      title: 'SELECT (Cấp 3)',
-      detail: `Lệnh chọn cấp cuối cùng cho UID 10 byte. Sau bước này, toàn bộ UID đã được biết và thẻ ở trạng thái ACTIVE.`,
-    },
-    'RATS': {
-      title: 'RATS (Yêu Cầu ATS)',
-      detail: `Đầu đọc yêu cầu ATS (Answer To Select) từ thẻ. Byte đầu là 0xE0, byte thứ hai là tham số FSDI/DRI ` +
-              `(${hex(d[1])}). ` +
-              `Đánh dấu bước chuyển từ vòng lặp chống xung đột sang giao thức truyền tải ISO 14443-4.`,
-    },
-    'ATS': {
-      title: 'ATS (Trả Lời ATS)',
-      detail: `Thẻ phản hồi RATS với các khả năng của mình: tốc độ dữ liệu hỗ trợ (TA1), kích thước khung (FSCI), ` +
-              `tùy chọn giao thức (TB1/TC1), và tùy chọn khối byte lịch sử. ` +
-              `Độ dài: ${d.length} byte. Byte đầu tiên (TL) cho biết tổng độ dài ATS.`,
-    },
-    'PPS': {
-      title: 'PPS (Lựa Chọn Tham Số Giao Thức)',
-      detail: `Đầu đọc đề xuất thay đổi tham số giao tiếp (tốc độ baud, kích thước khung). ` +
-              `Byte đầu: ${hex(d[0])} (PPSS). ` +
-              `Thẻ phải phản hồi chính xác khung PPS để chấp nhận tham số mới.`,
-    },
-    'AUTH': {
-      title: 'AUTH (Xác Thực MIFARE Classic)',
-      detail: `${f.isTx ? 'TAG→RD' : 'RD→TAG'}: Lệnh xác thực MIFARE Classic. ` +
-              `Loại khóa: ${d[0] === 0x60 ? 'Khóa A' : d[0] === 0x61 ? 'Khóa B' : hex(d[0])}. ` +
-              `Block: ${hex(d[1])}. ` +
-              `Khởi tạo chuỗi xác thực CRYPTO1 3 bước. Các khung 8 byte tiếp theo là thử thách/phản hồi.`,
-    },
-    'DESELECT': {
-      title: 'DESELECT (Hủy Chọn)',
-      detail: `Đầu đọc hủy chọn thẻ hiện tại, đưa thẻ về trạng thái HALT. Khối S với lệnh DESELECT (0xC2). ` +
-              `Thẻ xác nhận bằng S(WTX) chứa PCB tương tự được phản hồi lại.`,
-    },
-    'WTX': {
-      title: 'WTX (Gia Hạn Thời Gian Chờ)',
-      detail: `Khối S yêu cầu gia hạn thời gian chờ. Thẻ (hoặc đầu đọc) cần thêm thời gian để xử lý lệnh. ` +
-              `Chứa hệ số nhân WTXM (1–59) kéo dài FWT theo hệ số đó.`,
-    },
-    'S-BLOCK': {
-      title: 'S-Block (Khối Giám Sát)',
-      detail: `Khối giám sát T=CL dùng cho điều khiển giao thức. PCB: ${hex(d[0])}. ` +
-              `Dùng cho DESELECT, WTX, và các chức năng điều khiển ISO 14443-4 khác.`,
-    },
-    'I-BLOCK': {
-      title: 'I-Block (Khối Thông Tin)',
-      detail: `Khối dữ liệu ứng dụng T=CL. Mang APDU hoặc dữ liệu lớp trên. ` +
-              `PCB: ${hex(d[0])} (số khối: ${d[0] != null ? (d[0] & 0x01) : '?'}). ` +
-              `${d.length > 1 ? `CID: ${d.length >= 2 ? hex(d[1]) : 'không có'}` : ''}` +
-              `${d.length > 2 ? ` | NAD: ${d.length >= 3 ? hex(d[2]) : 'không có'}` : ''}`,
-    },
-    'R-BLOCK': {
-      title: 'R-Block (Sẵn Sàng Nhận / NAK)',
-      detail: `Khối xác nhận T=CL. PCB: ${hex(d[0])}. ` +
-              `Mẫu bit cho biết: ${(d[0] & 0x10) ? 'NAK (lỗi, yêu cầu truyền lại)' : 'ACK (đã nhận OK)'}. ` +
-              `Số khối: ${d[0] != null ? (d[0] & 0x01) : '?'}.`,
-    },
-    'CMD_0x26': {
-      title: 'Khung Ngắn — 0x26',
-      detail: 'Khung ngắn, 7 bit, giá trị 0x26. Đây là lệnh REQA tiêu chuẩn để quét thẻ trong trường.',
-    },
-    'CMD_0x52': {
-      title: 'Khung Ngắn — 0x52',
-      detail: 'Khung ngắn, 7 bit, giá trị 0x52. Đây là lệnh WUPA tiêu chuẩn để đánh thức thẻ đã dừng.',
-    },
-    'DATA': {
-      title: 'Dữ Liệu Ứng Dụng',
-      detail: `Khung dữ liệu thô — có thể là dữ liệu lớp ứng dụng (APDU, NDEF, độc quyền), ` +
-              `hoặc lệnh giao thức không nhận dạng được. ${f.data.length} byte.`,
-    },
-    'unknown': {
-      title: 'Khung Không Xác Định',
-      detail: 'Định dạng khung không nhận dạng được. Có thể là thu thập không đầy đủ, nhiễu, hoặc lệnh không chuẩn.',
-    },
-    'ATQA': {
-      title: 'ATQA (Answer To Request Type A)',
-      detail: `Thẻ phản hồi REQA với 2 byte ATQA. Byte cao (${hex(d[0])}): ` +
-              `mã nền tảng độc quyền. Byte thấp (${hex(d[1])}): ` +
-              `các bit UID, chống xung đột, định danh chip. ` +
-              `MIFARE Classic 1K thường là 0x00 0x04. MIFARE Classic 4K: 0x00 0x02. Ultralight: 0x00 0x44.`,
-    },
-    'UID_CL1': {
-      title: 'UID Cấp 1 (Định Danh Thẻ)',
-      detail: `Thẻ gửi UID 4 byte + BCC tại Cấp 1. ` +
-              `UID: ${hex(d[0])} ${hex(d[1])} ${hex(d[2])} ${hex(d[3])} ` +
-              `(BCC=${hex(d[4])}). ` +
-              `BCC = UID0 ⊕ UID1 ⊕ UID2 ⊕ UID3.`,
-    },
-    'UID_CL2': {
-      title: 'UID Cấp 2 (Định Danh Thẻ, Phần Mở Rộng)',
-      detail: `Thẻ gửi phần mở rộng UID tại Cấp 2. Byte CT=0x88 + 3 byte UID + BCC. ` +
-              `UID đầy đủ là UID CL1 (4 byte) + UID CL2 (3 byte) = UID 7 byte.`,
-    },
-    'UID': {
-      title: 'UID (Định Danh Thẻ)',
-      detail: `Thẻ gửi định danh UID. ${d.length} byte. Đây là phản hồi sau lệnh ANTICOLLISION.`,
-    },
-    'AUTH_CHALLENGE': {
-      title: 'AUTH Thử Thách (8 byte)',
-      detail: `Đầu đọc gửi khối thử thách 8 byte (đã mã hóa CRYPTO1) sau khi nhận nonce từ thẻ. ` +
-              `Đây là bước thứ 2 trong chuỗi xác thực 3 bước của MIFARE Classic.`,
-    },
-    'AUTH_RESPONSE': {
-      title: 'AUTH Phản Hồi (4 byte)',
-      detail: `Thẻ gửi phản hồi 4 byte (đã mã hóa) để hoàn tất xác thực CRYPTO1. ` +
-              `Nếu CRC của đầu đọc khớp, kênh truyền đã được mã hóa thành công.`,
-    },
-  };
+  if (ft.startsWith('SAK_0x')) return buildSAKDescription(ft.slice(6));
 
-  let desc = descriptions[t];
-  if (!desc && t.startsWith('SAK_0x'))  desc = buildSAKDescription(t.slice(6));
-  if (!desc && t.startsWith('CMD_0x')) {
-    const val = t.slice(6);
-    desc = {
-      title: `Khung Ngắn — 0x${val.toUpperCase()}`,
-      detail: `Khung ngắn, 7 bit, giá trị 0x${val.toUpperCase()}. Mã lệnh không chuẩn hoặc dành riêng cho nhà sản xuất.`,
-    };
+  const titleKey = 'desc' + ft.replace(/[^a-zA-Z0-9]/g, '') + 'Title';
+  let title = t(titleKey);
+  if (title === titleKey) title = ft;
+
+  let detail = '';
+  switch (ft) {
+    case 'REQA': case 'WUPA': case 'HALT':
+    case 'CMD_0x26': case 'CMD_0x52':
+    case 'DESELECT': case 'WTX':
+    case 'SELECT_CL2': case 'SELECT_CL3':
+    case 'UID_CL2': case 'AUTH_CHALLENGE': case 'AUTH_RESPONSE':
+      detail = t('desc' + ft.replace(/[^a-zA-Z0-9]/g, '') + 'Detail');
+      break;
+    case 'unknown':
+      title = t('descUnknownTitle');
+      detail = t('descUnknownDetail');
+      break;
+    case 'ANTICOLL_CL1': {
+      const nvb = d[0] != null ? ((d[0] & 0x0F) < 7 ? (d[0] & 0x0F) * 8 : (d[0] & 0x0F) * 8 + 8) : '?';
+      detail = t('descANTICOLLCL1Detail', hex(d[0]), nvb);
+      break;
+    }
+    case 'ANTICOLL_CL2':
+      detail = t('descANTICOLLCL2Detail', hex(d[0]));
+      break;
+    case 'ANTICOLL_CL3':
+      detail = t('descANTICOLLCL3Detail', hex(d[0]));
+      break;
+    case 'SELECT_CL1':
+      detail = t('descSELECTCL1Detail');
+      break;
+    case 'RATS':
+      detail = t('descRATSDetail', hex(d[1]));
+      break;
+    case 'ATS':
+      detail = t('descATSDetail', d.length);
+      break;
+    case 'PPS':
+      detail = t('descPPSDetail', hex(d[0]));
+      break;
+    case 'AUTH':
+      detail = t('descAUTHDetail',
+        f.isTx ? t('descAuthDirTag') : t('descAuthDirReader'),
+        d[0] === 0x60 ? t('descKeyA') : d[0] === 0x61 ? t('descKeyB') : hex(d[0]),
+        hex(d[1]));
+      break;
+    case 'S-BLOCK':
+      detail = t('descSBLOCKDetail', hex(d[0]));
+      break;
+    case 'I-BLOCK': {
+      const cid = d.length > 1 ? t('descIBLOCKCid', hex(d[1])) : t('descIBLOCKNoCid');
+      const nad = d.length > 2 ? t('descIBLOCKNad', hex(d[2])) : t('descIBLOCKNoNad');
+      detail = t('descIBLOCKDetail', hex(d[0]), d[0] != null ? (d[0] & 0x01) : '?', cid, nad);
+      break;
+    }
+    case 'R-BLOCK':
+      detail = t('descRBLOCKDetail', hex(d[0]),
+        (d[0] & 0x10) ? t('descRBLOCKNak') : t('descRBLOCKAck'),
+        d[0] != null ? (d[0] & 0x01) : '?');
+      break;
+    case 'DATA':
+      detail = t('descDATADetail', f.data.length);
+      break;
+    case 'ATQA':
+      detail = t('descATQADetail', hex(d[0]), hex(d[1]));
+      break;
+    case 'UID_CL1':
+      detail = t('descUIDCL1Detail', hex(d[0]), hex(d[1]), hex(d[2]), hex(d[3]), hex(d[4]));
+      break;
+    case 'UID':
+      detail = t('descUIDDetail', d.length);
+      break;
+    default:
+      if (ft.startsWith('CMD_0x')) {
+        const val = ft.slice(6);
+        title = t('descCMDTitle', val.toUpperCase());
+        detail = t('descCMDDetail', val.toUpperCase());
+      } else {
+        detail = t('descFallbackDetail', f.data.length);
+      }
+      break;
   }
-  if (!desc) desc = { title: `${t}`, detail: `${f.data.length} byte dữ liệu.` };
-  return desc;
+  return { title, detail };
 }
 
 // ============================================================
@@ -1246,17 +1501,17 @@ function computeFrameDiff(framesA, framesB) {
 function phaseForFrameType(ft) {
   if (ft === 'REQA' || ft === 'WUPA' || ft === 'ATQA' ||
       ft.startsWith('ANTICOLL_') || ft.startsWith('UID') || ft.startsWith('SELECT_') || ft.startsWith('SAK_'))
-    return 'Chống Xung Đột & Chọn Thẻ';
+    return t('phaseAnticoll');
   if (ft === 'RATS' || ft === 'ATS' || ft === 'PPS')
-    return 'Kích Hoạt Giao Thức (ISO 14443-4)';
+    return t('phaseActivate');
   if (ft === 'AUTH' || ft === 'AUTH_CHALLENGE' || ft === 'AUTH_RESPONSE')
-    return 'Xác Thực MIFARE Classic (CRYPTO1)';
+    return t('phaseAuth');
   if (ft === 'I-BLOCK' || ft === 'R-BLOCK' || ft === 'S-BLOCK' || ft === 'DESELECT' || ft === 'WTX')
-    return 'Trao Đổi Dữ Liệu (T=CL)';
+    return t('phaseData');
   if (ft === 'HALT')
-    return 'Kết Thúc Phiên';
+    return t('phaseEnd');
   if (ft === 'DATA')
-    return 'Dữ Liệu Mã Hóa (Sau Xác Thực)';
+    return t('phaseEncrypted');
   return '';
 }
 
@@ -1375,9 +1630,9 @@ function updateStatus() {
   const pill = document.getElementById('statusPill');
   const text = document.getElementById('statusText');
   const n = slotCount();
-  if (n === 0) { pill.classList.remove('live'); text.textContent = 'No file loaded'; }
-  else if (n === 1) { pill.classList.add('live'); text.textContent = '1 file loaded'; }
-  else { pill.classList.add('live'); text.textContent = '2 files loaded'; }
+  if (n === 0) { pill.classList.remove('live'); text.textContent = t('noFileLoaded'); }
+  else if (n === 1) { pill.classList.add('live'); text.textContent = t('oneFileLoaded'); }
+  else { pill.classList.add('live'); text.textContent = t('twoFilesLoaded'); }
 }
 
 function showFileInfo() {
@@ -1390,13 +1645,13 @@ function showFileInfo() {
   for (const s of slots) {
     if (!s.data) {
       html += `<div class="info-block ${s.cls} info-empty" style="min-width:200px">
-        <dt>File ${s.label}</dt>
-        <dd style="color:var(--text-dim);font-style:italic">Not loaded</dd>
+        <dt>${t('fileSlot', s.label)}</dt>
+        <dd style="color:var(--text-dim);font-style:italic">${t('notLoaded')}</dd>
       </div>`;
       continue;
     }
     const d = s.data;
-    const typeLabel = d.type === 'hf' ? 'HF 14A' : 'LF ADC';
+    const typeLabel = d.type === 'hf' ? t('hfType') : t('lfType');
     let extras = '';
     if (d.extra) {
       extras = Object.entries(d.extra)
@@ -1404,7 +1659,7 @@ function showFileInfo() {
         .join('');
     }
     html += `<div class="info-block ${s.cls}" style="min-width:200px">
-      <dt>File ${s.label} <span class="info-fname">${d.name}</span></dt>
+      <dt>${t('fileSlot', s.label)} <span class="info-fname">${d.name}</span></dt>
       <dd>${typeLabel} &middot; ${d.u8.length.toLocaleString()} bytes${extras}</dd>
     </div>`;
   }
@@ -1422,13 +1677,16 @@ function renderSlotBar() {
   let html = '';
   for (const s of slots) {
     if (s.data) {
+      const status = s.data.type === 'hf'
+        ? t('slotStatusFrames', s.data.frames.length)
+        : t('slotStatus', s.data.u8.length);
       html += `<div class="slot-pill${state.currentView === s.label ? ' active' : ''}" data-slot="${s.label}">
         <span class="slot-badge ${s.cls}">${s.label}</span>
         <span class="slot-fname">${s.data.name}</span>
-        <span class="slot-status">${s.data.type === 'hf' ? s.data.frames.length + ' frames' : s.data.u8.length + ' samples'}</span>
+        <span class="slot-status">${status}</span>
       </div>`;
     } else {
-      html += `<div class="slot-load-btn" data-load="${s.label}">+ Load File ${s.label}</div>`;
+      html += `<div class="slot-load-btn" data-load="${s.label}">${t('loadFileBtn', s.label)}</div>`;
     }
   }
   el.innerHTML = html;
@@ -1458,16 +1716,16 @@ function switchView(slot) {
 // ============================================================
 function buildFrameTable(container, frames, detailPrefix) {
   if (frames.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F50D;</div>No frames found.</div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F50D;</div>' + t('noFrames') + '</div>';
     return;
   }
   let html = `<table class="frame-table">
     <thead><tr>
-      <th>#</th><th>Dir</th><th>Type</th><th>Bits</th><th>Bytes</th><th>Data</th><th>ASCII</th>
+      <th>#</th><th>${t('colDir')}</th><th>${t('colType')}</th><th>${t('colBits')}</th><th>${t('colBytes')}</th><th>${t('colDataHex')}</th><th>${t('colAscii')}</th>
     </tr></thead><tbody>`;
   for (const f of frames) {
     const dirClass = f.isTx ? 'dir-tx' : 'dir-rx';
-    const dirLabel = f.isTx ? 'THẺ→ĐỌC' : 'ĐỌC→THẺ';
+    const dirLabel = f.isTx ? t('dirTagToReader') : t('dirReaderToTag');
     const hexStr = buildHexStr(f);
     const asciiStr = Array.from(f.data).map(toAscii).join('');
     const typeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1508,7 +1766,7 @@ function buildFrameTable(container, frames, detailPrefix) {
 // ============================================================
 function renderMessages(frames, withDesc) {
   if (frames.length === 0) {
-    return '<div class="empty-state"><div class="empty-state-icon">&#x1F4AC;</div>No messages.</div>';
+    return '<div class="empty-state"><div class="empty-state-icon">&#x1F4AC;</div>' + t('noMessages') + '</div>';
   }
   let phase = '';
   let html = '<div class="messages-container">';
@@ -1520,7 +1778,7 @@ function renderMessages(frames, withDesc) {
     }
     const isTag = f.isTx;
     const side = isTag ? 'tag' : 'reader';
-    const senderLabel = isTag ? 'Thẻ' : 'Đầu Đọc';
+    const senderLabel = isTag ? t('senderTag') : t('senderReader');
     const avatar = isTag ? '&#x1F4F6;' : '&#x1F4E1;';
     const hexStr = buildHexStr(f);
     const asciiStr = Array.from(f.data).map(toAscii).join('');
@@ -1532,7 +1790,7 @@ function renderMessages(frames, withDesc) {
         <div class="msg-header">
           <span class="msg-sender">${senderLabel}</span>
           <span class="msg-type ${msgTypeClass}">${f.frameType}</span>
-          <span class="msg-number">#${f.index}${withDesc ? ' · ' + f.szBits + ' bits' : ''}</span>
+          <span class="msg-number">${withDesc ? t('msgNumber', f.index, f.szBits) : '#' + f.index}</span>
         </div>
         <div class="msg-hex">${hexStr}</div>
         <div class="msg-ascii">${asciiStr}</div>
@@ -1553,8 +1811,8 @@ function renderSingleLF(u8, containerId, slotLabel) {
     <canvas id="wf-${containerId}"></canvas>
   </div>
   <div class="waveform-controls">
-    <label>Zoom <input type="range" id="zoom-${containerId}" min="1" max="200" value="100"></label>
-    <label class="spacer"><input type="checkbox" id="fit-${containerId}" checked> Auto-fit</label>
+    <label>${t('zoom')} <input type="range" id="zoom-${containerId}" min="1" max="200" value="100"></label>
+    <label class="spacer"><input type="checkbox" id="fit-${containerId}" checked> ${t('autoFit')}</label>
   </div>
   <div class="waveform-stats" id="stats-${containerId}"></div>`;
 
@@ -1576,13 +1834,22 @@ function renderSingleLF(u8, containerId, slotLabel) {
     drawWaveform(ctx, u8, '#7c9cff',
       ['rgba(124,156,255,0.28)', 'rgba(124,156,255,0)'],
       { w, h, dpr, offsetY: 0, drawH: h, zoomVal: parseInt(zoomSlider.value), autoFit: autoFitCheck.checked,
-        drawGrid: true, label: `${getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked).end - getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked).start} samples` });
+        drawGrid: true, label: `${getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked).end - getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked).start} ${t('samples')}` });
 
     const { start, end } = getViewRange(u8, parseInt(zoomSlider.value), autoFitCheck.checked);
     // stats
     const { yMin, yMax } = valueRange(u8, start, end);
+    const viewSamples = end - start;
+    const totalMs = (u8.length * 8 / 1000).toFixed(1);
+    const viewMs = ((end - start) * 8 / 1000).toFixed(1);
+    const yMinHex = yMin.toString(16).padStart(2,'0');
+    const yMaxHex = yMax.toString(16).padStart(2,'0');
     document.getElementById('stats-' + containerId).textContent =
-      `File ${slotLabel||''}: ${u8.length} samples total | View: ${end - start} samples | Range: 0x${yMin.toString(16).padStart(2,'0')}–0x${yMax.toString(16).padStart(2,'0')} | ~125 kHz | ${((end-start)*8/1000).toFixed(1)} ms / ${(u8.length*8/1000).toFixed(1)} ms`;
+      t('fileTotal', slotLabel || '', u8.length) + ' | ' +
+      t('viewSamples', viewSamples) + ' | ' +
+      t('range', yMinHex, yMaxHex) + ' | ' +
+      t('freq') + ' | ' +
+      t('duration', viewMs, totalMs);
   }
 
   zoomSlider.addEventListener('input', draw);
@@ -1604,12 +1871,12 @@ function renderHFCompare(containerId) {
   container.innerHTML = `
     <div class="compare-toolbar">
       <div class="tab-bar">
-        <div class="tab active" data-cmp-tab="frames">Frames</div>
-        <div class="tab" data-cmp-tab="messages">Messages</div>
+        <div class="tab active" data-cmp-tab="frames">${t('frames')}</div>
+        <div class="tab" data-cmp-tab="messages">${t('messages')}</div>
       </div>
       ${diffCount > 0
-        ? `<span class="diff-count">&#9888; ${diffCount} difference${diffCount === 1 ? '' : 's'}</span>`
-        : '<span class="diff-identical">&#10003; Identical frame structure</span>'}
+        ? `<span class="diff-count">${t('diffCountPlural', diffCount)}</span>`
+        : `<span class="diff-identical">${t('identicalStructure')}</span>`}
     </div>
     <div id="cmp-frames" class="compare-layout"></div>
     <div id="cmp-messages" class="compare-msgs hidden"></div>
@@ -1647,7 +1914,7 @@ function buildCompareTable(label, frames, diffMap, badgeCls) {
     <div class="col-header"><span class="col-badge ${badgeCls}">${label}</span><span class="col-name">${escapeHtml(file.name)}</span></div>
     <div class="compare-sync-scroll">
     <table class="frame-table">
-      <thead><tr><th>#</th><th>Dir</th><th>Type</th><th>Data</th></tr></thead><tbody>`;
+      <thead><tr><th>#</th><th>${t('colDir')}</th><th>${t('colType')}</th><th>${t('colDataHex')}</th></tr></thead><tbody>`;
   for (let i = 0; i < frames.length; i++) {
     const f = frames[i];
     if (!f) {
@@ -1657,7 +1924,7 @@ function buildCompareTable(label, frames, diffMap, badgeCls) {
     const diffKey = label + '_' + i;
     const isDiff = diffMap[diffKey];
     const dirClass = f.isTx ? 'dir-tx' : 'dir-rx';
-    const dirLabel = f.isTx ? 'THẺ→ĐỌC' : 'ĐỌC→THẺ';
+    const dirLabel = f.isTx ? t('dirTagToReader') : t('dirReaderToTag');
     const hexStr = buildHexStr(f);
     const typeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
     html += `<tr class="${isDiff ? 'frame-diff' : ''}">
@@ -1679,11 +1946,11 @@ function renderLFCompare(containerId) {
   const u8a = state.fileA.u8;
   const u8b = state.fileB.u8;
   container.innerHTML = `<div class="compare-toolbar">
-    <span class="compare-legend"><span class="swatch" style="background:var(--accent)"></span> File A</span>
-    <span class="compare-legend"><span class="swatch" style="background:var(--green)"></span> File B</span>
-    <label class="ml-auto">Zoom <input type="range" id="cmp-zoom" min="1" max="200" value="100" style="width:120px;accent-color:var(--accent)"></label>
-    <label><input type="checkbox" id="cmp-fit" checked> Auto-fit</label>
-    <label><input type="checkbox" id="cmp-stacked"> Stacked</label>
+    <span class="compare-legend"><span class="swatch" style="background:var(--accent)"></span> ${t('fileALabel')}</span>
+    <span class="compare-legend"><span class="swatch" style="background:var(--green)"></span> ${t('fileBLabel')}</span>
+    <label class="ml-auto">${t('zoom')} <input type="range" id="cmp-zoom" min="1" max="200" value="100" style="width:120px;accent-color:var(--accent)"></label>
+    <label><input type="checkbox" id="cmp-fit" checked> ${t('autoFit')}</label>
+    <label><input type="checkbox" id="cmp-stacked"> ${t('stacked')}</label>
   </div>
   <div class="waveform-compare" id="cmp-wave-box">
     <canvas id="cmp-canvas-a"></canvas>
@@ -1724,10 +1991,10 @@ function renderLFCompare(containerId) {
     if (stacked) {
       drawWaveform(ctxA, u8a, '#7c9cff',
         ['rgba(124,156,255,0.28)', 'rgba(124,156,255,0)'],
-        { w, h: aH, dpr, offsetY: 0, drawH: aH, zoomVal, autoFit, drawGrid: true, label: 'File A' });
+        { w, h: aH, dpr, offsetY: 0, drawH: aH, zoomVal, autoFit, drawGrid: true, label: t('fileALabel') });
       drawWaveform(ctxB, u8b, '#4ade80',
         ['rgba(74,222,128,0.26)', 'rgba(74,222,128,0)'],
-        { w, h: bH, dpr, offsetY: 0, drawH: bH, zoomVal, autoFit, drawGrid: true, label: 'File B' });
+        { w, h: bH, dpr, offsetY: 0, drawH: bH, zoomVal, autoFit, drawGrid: true, label: t('fileBLabel') });
     } else {
       // Overlay: draw A then B onto the same canvas
       ctxA.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1760,14 +2027,16 @@ function renderLFCompare(containerId) {
         for (let i = 0; i < pts.length; i++) i === 0 ? ctxA.moveTo(pts[i][0], pts[i][1]) : ctxA.lineTo(pts[i][0], pts[i][1]);
         ctxA.stroke();
         ctxA.fillStyle = 'rgba(154,160,184,0.85)'; ctxA.font = '11px monospace';
-        ctxA.fillText(labelAtBottom ? 'File B' : 'File A', 6, labelAtBottom ? fullH - 5 : 14);
+        ctxA.fillText(labelAtBottom ? t('fileBLabel') : t('fileALabel'), 6, labelAtBottom ? fullH - 5 : 14);
       };
       overlay(u8a, 'rgba(124,156,255,0.85)', ['rgba(124,156,255,0.16)', 'rgba(124,156,255,0)'], false);
       overlay(u8b, 'rgba(74,222,128,0.85)', ['rgba(74,222,128,0.14)', 'rgba(74,222,128,0)'], true);
     }
 
+    const viewLabel = stacked ? t('stackedView') : t('overlaidView');
     document.getElementById('cmp-stats').textContent =
-      `File A: ${u8a.length} samples | File B: ${u8b.length} samples | ${stacked ? 'Stacked' : 'Overlaid'} view`;
+      t('fileALabel') + ': ' + u8a.length + ' ' + t('samples') + ' | ' +
+      t('fileBLabel') + ': ' + u8b.length + ' ' + t('samples') + ' | ' + viewLabel;
   }
 
   zoomSlider.addEventListener('input', draw);
@@ -1799,8 +2068,8 @@ function renderCurrentView() {
 
   if (canCompare) {
     tabBar.innerHTML = `
-      <div class="tab active" data-panel="single">File ${state.currentView}</div>
-      <div class="tab" data-panel="compare">Compare</div>`;
+      <div class="tab active" data-panel="single">${t('fileSlot', state.currentView)}</div>
+      <div class="tab" data-panel="compare">${t('compare')}</div>`;
     panels.innerHTML = `
       <div class="panel active" id="panel-single"></div>
       <div class="panel" id="panel-compare"></div>`;
@@ -1819,8 +2088,8 @@ function renderCurrentView() {
   } else {
     if (data.type === 'hf') {
       tabBar.innerHTML = `
-        <div class="tab active" data-panel="frames">Frames</div>
-        <div class="tab" data-panel="messages">Messages</div>`;
+        <div class="tab active" data-panel="frames">${t('frames')}</div>
+        <div class="tab" data-panel="messages">${t('messages')}</div>`;
       panels.innerHTML = `
         <div class="panel active" id="panel-frames"></div>
         <div class="panel" id="panel-messages"></div>`;
@@ -1831,7 +2100,7 @@ function renderCurrentView() {
         document.getElementById(panelId).classList.add('active');
       });
     } else {
-      tabBar.innerHTML = '<div class="tab active" data-panel="waveform">Waveform</div>';
+      tabBar.innerHTML = '<div class="tab active" data-panel="waveform">' + t('waveform') + '</div>';
       panels.innerHTML = `<div class="panel active" id="panel-waveform"></div>`;
       renderSingleLF(data.u8, 'panel-waveform', state.currentView);
     }
@@ -1851,8 +2120,8 @@ function renderSingleHFInto(containerId, frames, opts) {
   const uid = 's' + Math.random().toString(36).slice(2, 9);
   container.innerHTML = `
     <div class="tab-bar" id="stb-${uid}">
-      <div class="tab active" data-sp="frames-${uid}">Frames</div>
-      <div class="tab" data-sp="messages-${uid}">Messages</div>
+      <div class="tab active" data-sp="frames-${uid}">${t('frames')}</div>
+      <div class="tab" data-sp="messages-${uid}">${t('messages')}</div>
     </div>
     <div class="panel active" id="frames-${uid}"></div>
     <div class="panel" id="messages-${uid}"></div>`;
@@ -1882,27 +2151,26 @@ function processFile(file, slot) {
   reader.onload = function(e) {
     try {
       const u8 = new Uint8Array(e.target.result);
-      if (u8.length === 0) throw new Error('File is empty.');
+      if (u8.length === 0) throw new Error(t('errorEmpty'));
       const type = detectFileType(u8);
       let frames = null;
       let extra = null;
       if (type === 'hf') {
         frames = parseHFSniff(u8);
-        extra = { 'Frames': frames.length };
+        extra = { [t('extraFrames')]: frames.length };
       } else {
-        extra = { 'Samples': u8.length, 'Duration': `${(u8.length * 8 / 1000).toFixed(1)} ms` };
+        extra = { [t('extraSamples')]: u8.length, [t('extraDuration')]: `${(u8.length * 8 / 1000).toFixed(1)} ms` };
       }
       setSlot(slot, { name: file.name, u8, type, frames, extra });
       state.currentView = slot;
       renderSlotBar();
       showFileInfo();
-      updateStatus();
       renderCurrentView();
     } catch (err) {
-      showError('Error: ' + err.message);
+      showError(t('errorPrefix') + err.message);
     }
   };
-  reader.onerror = function() { showError('Error reading file.'); };
+  reader.onerror = function() { showError(t('errorReading')); };
   reader.readAsArrayBuffer(file);
 }
 
@@ -1965,7 +2233,9 @@ fileInputB.addEventListener('change', () => {
   }
 });
 
-updateStatus();
+document.getElementById('langBtnEn').addEventListener('click', () => setLang('en'));
+document.getElementById('langBtnVi').addEventListener('click', () => setLang('vi'));
+setLang(state.lang);
 </script>
 </body>
 </html>
