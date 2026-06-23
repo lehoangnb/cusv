@@ -159,6 +159,15 @@
   }
   .topbar .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
   .lang-switcher { display: flex; align-items: center; gap: 2px; }
+  .reader-toggle-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    cursor: pointer; padding: 4px 10px; border-radius: var(--r-sm);
+    font-family: inherit; font-size: 0.72rem;
+    transition: color 0.18s var(--ease), background 0.18s var(--ease), border-color 0.18s var(--ease);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .reader-toggle-btn:hover { color: var(--text); border-color: var(--accent); background: var(--surface-2); }
+  .reader-toggle-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
   .lang-btn {
     background: none; border: none; color: var(--text-faint);
     cursor: pointer; padding: 2px 6px; border-radius: var(--r-sm);
@@ -741,7 +750,204 @@
   }
   .compare-fallback-icon { font-size: 2.2rem; margin-bottom: 12px; opacity: 0.5; }
 
+  /* ============================================================
+     Reader panel
+     ============================================================ */
+  .reader-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: var(--r-md);
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer;
+    font-family: inherit; font-size: 0.78rem;
+    transition: all 0.2s var(--ease);
+  }
+  .reader-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface-2); }
+  .reader-btn.active { background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.25); }
+  .reader-panel { margin-top: 16px; }
+  .reader-connect-bar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 12px 16px; margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .reader-conn-select { display: flex; gap: 10px; align-items: center; }
+  .reader-conn-select label { font-size: 0.78rem; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .reader-conn-select input[type=radio] { accent-color: var(--accent); cursor: pointer; }
+  .reader-status { font-size: 0.74rem; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+  .reader-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); }
+  .reader-status .dot.connected { background: var(--green); box-shadow: 0 0 10px rgba(var(--green-rgb), 0.7); animation: pulse 2s var(--ease) infinite; }
+  .reader-action-btn {
+    padding: 6px 14px; border-radius: var(--r-sm);
+    font-size: 0.74rem; font-family: inherit; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text-dim); transition: all 0.15s var(--ease);
+  }
+  .reader-action-btn:hover { border-color: var(--accent); color: var(--text); }
+  .reader-action-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .reader-action-btn.primary:hover { background: var(--accent-2); }
+  .reader-action-btn.danger { border-color: rgba(var(--red-rgb), 0.5); color: var(--red); }
+  .reader-action-btn.danger:hover { background: rgba(var(--red-rgb), 0.15); }
+  .reader-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .reader-clear-btn { background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; font-size:0.65rem; font-family:inherit; padding:2px 8px; border-radius:var(--r-sm); }
+  .reader-toggle-corner { position:absolute; top:8px; right:8px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; font-size:0.72rem; font-family:inherit; padding:4px 10px; border-radius:var(--r-sm); z-index:10; display:flex; align-items:center; gap:4px; }
+  .reader-toggle-corner:hover { border-color:var(--accent); color:var(--accent); background:rgba(var(--accent-rgb),0.1); }
+  #panel-single { position:relative; }
+  .reader-clear-btn:hover { color:var(--accent); }
+  .reader-command-bar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .reader-command-bar input[type=text] {
+    flex: 1; min-width: 200px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 8px 12px;
+    color: var(--text); font-family: inherit; font-size: 0.8rem;
+    outline: none; transition: border-color 0.15s var(--ease);
+  }
+  .reader-command-bar input[type=text]:focus { border-color: var(--accent); box-shadow: var(--ring); }
+  .reader-presets {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .reader-preset-btn {
+    padding: 4px 10px; border-radius: var(--r-sm);
+    font-size: 0.68rem; font-family: inherit; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text-faint); transition: all 0.15s var(--ease);
+  }
+  .reader-preset-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-3); }
+  .reader-preset-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .reader-log-container {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 12px;
+    max-height: 55vh; overflow-y: auto;
+    box-shadow: var(--shadow-sm);
+  }
+  .reader-log-empty {
+    text-align: center; padding: 32px 16px;
+    color: var(--text-dim); font-size: 0.82rem;
+  }
+  .reader-log-wrap { display: flex; flex-direction: column; gap: 3px; }
+  .reader-log-entry {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 5px 8px; border-radius: var(--r-sm);
+    font-size: 0.76rem;
+    border-left: 3px solid transparent;
+  }
+  .reader-log-entry.tx { border-left-color: var(--blue); background: rgba(var(--blue-rgb), 0.05); }
+  .reader-log-entry.rx { border-left-color: var(--green); background: rgba(var(--green-rgb), 0.05); }
+  .reader-log-entry.info { border-left-color: var(--text-faint); }
+  .reader-log-entry.error { border-left-color: var(--red); background: rgba(var(--red-rgb), 0.08); }
+  .reader-log-dir { font-weight: 600; font-size: 0.65rem; text-transform: uppercase; min-width: 20px; }
+  .reader-log-entry.tx .reader-log-dir { color: var(--blue); }
+  .reader-log-entry.rx .reader-log-dir { color: var(--green); }
+  .reader-log-time { color: var(--text-faint); font-size: 0.65rem; min-width: 65px; }
+  .reader-log-data { font-family: 'SF Mono', 'Consolas', monospace; word-break: break-all; }
+  .reader-log-ascii { color: var(--text-dim); font-size: 0.68rem; margin-left: 4px; }
+  .reader-log-desc { color: var(--text-dim); font-size: 0.68rem; font-style: italic; display: block; margin-top: 2px; }
+  .reader-sniff-cmds {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); margin-bottom: 10px; box-shadow: var(--shadow-sm); overflow: hidden;
+  }
+  .reader-sniff-cmds .reader-page-hdr {
+    padding: 8px 12px; font-size: 0.72rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border); background: var(--surface-2);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .reader-sniff-count { color: var(--text-faint); font-weight: 400; }
+  .reader-sniff-cmds-list {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    max-height: 110px; overflow-y: auto;
+  }
+  .reader-sniff-cmd-item {
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 0.72rem; font-family: 'SF Mono', monospace;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer; white-space: nowrap;
+    transition: all 0.15s var(--ease);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .reader-sniff-cmd-item .cmd-dir { font-size: 0.6rem; color: var(--accent); }
+  .reader-sniff-cmd-item:hover { border-color: var(--accent); color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
+  .reader-sniff-cmd-item.sent { opacity: 0.5; }
+  .reader-sniff-cmd-empty { color: var(--text-faint); font-size: 0.72rem; padding: 10px 12px; font-style: italic; }
+  .reader-page-layout { display: flex; flex-direction: column; gap: 10px; }
+  .reader-page-hdr { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; font-weight: 600; }
+  .reader-page-hdr span { font-weight: 400; color: var(--text-faint); }
+  .reader-sniff-msgs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .reader-sniff-col { min-width: 0; }
+  .reader-col-hdr { font-size: 0.68rem; color: var(--text-faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; display: flex; gap: 6px; }
+  #readerRefBody.messages-container,
+  #readerRealBody.messages-container { gap: 4px; }
+  #readerRefBody .message,
+  #readerRealBody .message { max-width: 100%; margin: 0; }
+  #readerRefBody .msg-bubble,
+  #readerRealBody .msg-bubble { padding: 5px 8px; font-size: 0.7rem; }
+  #readerRefBody .msg-hex,
+  #readerRealBody .msg-hex { font-size: 0.7rem; }
+  #readerRefBody .msg-desc,
+  #readerRealBody .msg-desc { font-size: 0.62rem; }
+  .reader-chat-empty { text-align: center; padding: 40px 16px; color: var(--text-faint); font-size: 0.8rem; font-style: italic; }
+  #readerChatBody.messages-container { padding: 4px; gap: 6px; }
+  #readerChatBody .message { max-width: 95%; }
+  #readerChatBody .msg-bubble { font-size: 0.78rem; padding: 8px 12px; }
+  #readerChatBody .msg-ascii { font-size: 0.7rem; }
+  #readerChatBody .message.reader.active { border-left: 3px solid var(--accent); background: rgba(var(--accent-rgb), 0.08); border-radius: var(--r-sm); }
+  #readerChatBody .msg-desc { font-size: 0.7rem; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--hairline); }
+  .reader-chat-divider {
+    display: flex; align-items: center; gap: 8px; margin: 6px 0 4px;
+    color: var(--text-faint); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .reader-chat-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+  #readerRealRespBody.messages-container { margin-top: 0; }
+  #readerRealRespBody .message { max-width: 100%; animation: none; }
+  #readerRealRespBody .msg-bubble { font-size: 0.75rem; padding: 7px 10px; }
+  #readerRealRespBody .msg-hex { word-break: break-all; }
+  #readerRealRespBody .msg-desc { font-size: 0.65rem; margin-top: 2px; }
+  .reader-relay-log { max-height: 240px !important; }
+  .reader-sniff-msg {
+    padding: 5px 8px; border-radius: var(--r-sm);
+    font-size: 0.74rem; font-family: 'SF Mono', monospace;
+    border-left: 3px solid transparent; cursor: pointer;
+    transition: all 0.12s var(--ease);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .reader-sniff-msg:hover { background: rgba(var(--accent-rgb), 0.06); }
+  .reader-sniff-msg.active { background: rgba(var(--accent-rgb), 0.12); border-left-color: var(--accent); }
+  .reader-sniff-msg.cmd { border-left-color: var(--accent); }
+  .reader-sniff-msg.resp { border-left-color: var(--green); }
+  .reader-sniff-msg .msg-hex { color: var(--text); word-break: break-all; }
+  .reader-sniff-msg .msg-info { color: var(--text-faint); font-size: 0.65rem; display: flex; gap: 6px; }
+  .reader-sniff-msg .msg-desc { color: var(--text-dim); font-size: 0.65rem; font-style: italic; }
+  .reader-page-relay { margin-top: 4px; }
+  .reader-toggle-bar { margin-bottom: 8px; display: flex; }
+  .reader-scan-bar { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px; }
+  .reader-scan-btn { padding:4px 10px; border-radius:var(--r-sm); font-size:0.7rem; font-family:inherit; background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; transition:all 0.15s var(--ease); }
+  .reader-scan-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(var(--accent-rgb),0.08); }
+  .reader-scan-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .reader-scan-btn.reader-scan-primary { background:linear-gradient(135deg,rgba(var(--accent-rgb),0.2),rgba(var(--green-rgb),0.15)); border-color:rgba(var(--accent-rgb),0.4); color:var(--accent); font-weight:600; }
+  .reader-scan-btn.reader-scan-primary:hover { border-color:var(--accent); background:linear-gradient(135deg,rgba(var(--accent-rgb),0.3),rgba(var(--green-rgb),0.25)); }
+  .reader-page-relay .reader-page-hdr { margin-bottom: 0; }
+
+  .reader-error-banner {
+    background: rgba(var(--red-rgb), 0.1); border: 1px solid rgba(var(--red-rgb), 0.4);
+    border-radius: var(--r-sm); padding: 10px 14px;
+    color: var(--red); font-size: 0.78rem; margin-bottom: 10px;
+  }
+
   /* Utility */
+  .frame-send-btn {
+    background: rgba(var(--accent-rgb), 0.12);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    color: var(--accent);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    transition: background 0.15s var(--ease), transform 0.1s;
+    line-height: 1.2;
+  }
+  .frame-send-btn:hover { background: rgba(var(--accent-rgb), 0.25); transform: scale(1.1); }
+  .frame-send-btn:active { transform: scale(0.95); }
+
   .hidden { display: none !important; }
   .ml-auto { margin-left: auto; }
 
@@ -758,6 +964,10 @@
     .message { max-width: 95%; }
     .compare-layout, .compare-msgs { grid-template-columns: 1fr; }
     .drop-zone { padding: 38px 16px; }
+    .reader-connect-bar { flex-direction: column; align-items: stretch; }
+    .reader-command-bar { flex-direction: column; }
+    .reader-command-bar input[type=text] { min-width: auto; }
+    .reader-presets { gap: 2px; }
   }
 </style>
 </head>
@@ -794,7 +1004,62 @@
 
   <div id="slotBar" class="slot-bar hidden"></div>
   <div id="fileInfo" class="file-info hidden"></div>
+  <div class="reader-toggle-bar"><button class="reader-toggle-btn" id="readerToggle"><span>📡</span> <span id="readerToggleText">Reader</span></button></div>
   <div id="errorBox" class="error-box hidden"></div>
+
+  <!-- Reader Panel -->
+  <div id="readerPanel" class="hidden">
+    <div class="reader-connect-bar">
+      <div class="reader-conn-select">
+        <label><input type="radio" name="connType" value="serial" checked> <span data-i18n-t="readerComPort">COM Port</span></label>
+        <label><input type="radio" name="connType" value="ble"> <span data-i18n-t="readerBle">BLE</span></label>
+      </div>
+      <button class="reader-action-btn primary" id="readerConnectBtn" data-i18n-t="readerConnect">Connect</button>
+      <button class="reader-action-btn danger hidden" id="readerDisconnectBtn" data-i18n-t="readerDisconnect">Disconnect</button>
+      <span class="reader-status" id="readerStatus"><span class="dot"></span> <span id="readerStatusText">Not connected</span></span>
+    </div>
+
+    <div class="reader-panel">
+      <div class="reader-page-layout">
+        <div class="reader-page-sniff">
+          <div class="reader-sniff-msgs">
+            <div class="reader-sniff-col">
+              <div class="reader-page-hdr">Sniff: <span id="readerSniffName">—</span> <span id="readerFrameCount" style="font-weight:400"></span></div>
+              <div class="messages-container" id="readerChatBody" style="max-height:440px;min-height:280px">
+                <div class="reader-chat-empty" id="readerChatEmpty" data-i18n-t="readerLoadHf">Load an HF sniff file</div>
+              </div>
+            </div>
+            <div class="reader-sniff-col">
+              <div class="reader-page-hdr">Real-Time Tag Responses <span id="readerRespCount"></span></div>
+              <div class="reader-chat-divider" style="margin:0 0 4px">Sniff ref <span id="readerRefCount"></span></div>
+              <div class="messages-container" id="readerRefBody" style="max-height:180px;min-height:80px;margin-bottom:6px">
+                <div class="reader-chat-empty" style="padding:12px" data-i18n-t="readerClickCmd">Click a reader command</div>
+              </div>
+              <div class="reader-chat-divider" style="margin:0 0 4px" ><span data-i18n-t="readerFromDevice">From device</span> <button class="reader-clear-btn" onclick="readerClearReal()" data-i18n-t="readerClear">clear</button></div>
+              <div class="messages-container" id="readerRealBody" style="max-height:240px;min-height:80px">
+                <div class="reader-chat-empty" style="padding:12px" data-i18n-t="readerNoResp">No responses yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="reader-scan-bar">
+          <button class="reader-scan-btn reader-scan-primary" onclick="readerScanAll()" data-i18n-t="readerScanAll">🔍 Scan All Frequencies & Detect</button>
+        </div>
+        <div class="reader-page-relay" style="margin-top:8px">
+          <div class="reader-page-hdr" data-i18n-t="readerRelay">Relay to device</div>
+          <div class="reader-command-bar">
+            <input type="text" id="readerCmdInput" placeholder="" data-i18n-p="readerCmdPlaceholder" spellcheck="false">
+            <button class="reader-action-btn primary" id="readerSendBtn" disabled data-i18n-t="readerSend">Send</button>
+            <button class="reader-action-btn" id="readerClearLogBtn" data-i18n-t="readerClearLog">Clear</button>
+          </div>
+          <div class="reader-log-container reader-relay-log" id="readerLogContainer">
+            <div class="reader-log-empty" id="readerLogEmpty" data-i18n-t="readerLogEmpty">Connect &amp; click a sniff command to relay.</div>
+            <div class="reader-log-wrap hidden" id="readerLogWrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="tabs" class="hidden">
     <div class="tab-bar" id="tabBar"></div>
@@ -802,6 +1067,10 @@
   </div>
 </div>
 
+<script src="https://taichunmin.idv.tw/chameleon-ultra.js/index.global.js" crossorigin="anonymous"></script>
+<script src="https://taichunmin.idv.tw/chameleon-ultra.js/plugin/Debug.global.js" crossorigin="anonymous"></script>
+<script src="https://taichunmin.idv.tw/chameleon-ultra.js/plugin/WebbleAdapter.global.js" crossorigin="anonymous"></script>
+<script src="https://taichunmin.idv.tw/chameleon-ultra.js/plugin/WebserialAdapter.global.js" crossorigin="anonymous"></script>
 <script>
 // ============================================================
 //  State
@@ -965,6 +1234,31 @@ const translations = {
     phaseData: 'Data Exchange (T=CL)',
     phaseEnd: 'Session End',
     phaseEncrypted: 'Encrypted Data (Post-Auth)',
+    // Reader panel
+    readerConnect: 'Connect',
+    readerDisconnect: 'Disconnect',
+    readerConnected: 'Connected',
+    readerDisconnected: 'Disconnected',
+    readerScanAll: '🔍 Scan All Frequencies & Detect',
+    readerOpen: '📡 Open Reader',
+    readerClose: 'Close Reader',
+    readerRelay: 'Relay to device',
+    readerClear: 'clear',
+    readerRealTime: 'Real-Time Tag Responses',
+    readerSniffRef: 'Sniff ref',
+    readerFromDevice: 'From device',
+    readerCmdPlaceholder: 'Hex bytes (e.g. 26, 93 20)',
+    readerNoResp: 'No responses yet',
+    readerClickCmd: 'Click a reader command',
+    readerNotConnected: 'Not connected',
+    readerSend: 'Send',
+    readerClearLog: 'Clear',
+    readerSniff: 'Sniff',
+    readerCmds: 'Reader Cmds',
+    readerComPort: 'COM Port',
+    readerBle: 'BLE',
+    readerLoadHf: 'Load an HF sniff file',
+    readerLogEmpty: 'Connect &amp; click a sniff command to relay.',
   },
   vi: {
     siteTitle: 'Sniff Viewer <small>cho tệp .bin ChameleonUltra</small>',
@@ -1116,6 +1410,31 @@ const translations = {
     phaseData: 'Trao Đổi Dữ Liệu (T=CL)',
     phaseEnd: 'Kết Thúc Phiên',
     phaseEncrypted: 'Dữ Liệu Mã Hóa (Sau Xác Thực)',
+    // Reader panel
+    readerConnect: 'Kết nối',
+    readerDisconnect: 'Ngắt kết nối',
+    readerConnected: 'Đã kết nối',
+    readerDisconnected: 'Đã ngắt kết nối',
+    readerScanAll: '🔍 Quét Tất Cả & Phát Hiện',
+    readerOpen: '📡 Mở Reader',
+    readerClose: 'Đóng Reader',
+    readerRelay: 'Chuyển tiếp đến thiết bị',
+    readerClear: 'xóa',
+    readerRealTime: 'Phản Hồi Thời Gian Thực',
+    readerSniffRef: 'Tham chiếu sniff',
+    readerFromDevice: 'Từ thiết bị',
+    readerCmdPlaceholder: 'Hex bytes (VD: 26, 93 20)',
+    readerNoResp: 'Chưa có phản hồi',
+    readerClickCmd: 'Nhấp vào lệnh đầu đọc',
+    readerNotConnected: 'Chưa kết nối',
+    readerSend: 'Gửi',
+    readerClearLog: 'Xóa',
+    readerSniff: 'Sniff',
+    readerCmds: 'Lệnh đầu đọc',
+    readerComPort: 'Cổng COM',
+    readerBle: 'BLE',
+    readerLoadHf: 'Mở tệp sniff HF',
+    readerLogEmpty: 'Kết nối &amp; nhấp vào lệnh sniff để chuyển tiếp.',
   }
 };
 
@@ -1138,6 +1457,43 @@ function setLang(lang) {
   showFileInfo();
   renderSlotBar();
   renderCurrentView();
+  readerUpdateSniffList();
+  // Respect reader panel state
+  var rp = document.getElementById('readerPanel');
+  if (rp && !rp.classList.contains('hidden')) {
+    var tabs = document.getElementById('tabs');
+    var slotBar = document.getElementById('slotBar');
+    var fileInfo = document.getElementById('fileInfo');
+    tabs.classList.add('hidden');
+    slotBar.classList.add('hidden');
+    slotBar.style.display = 'none';
+    fileInfo.classList.add('hidden');
+    fileInfo.style.display = 'none';
+    document.querySelector('.subtitle').classList.add('hidden');
+    document.querySelector('.drop-zone').classList.add('hidden');
+  }
+  // Refresh reader panel language
+  var rp = document.getElementById('readerPanel');
+  if (rp && !rp.classList.contains('hidden')) {
+    rp.querySelectorAll('[data-i18n-t]').forEach(function(el) {
+      if (el.children.length === 0) el.textContent = t(el.dataset.i18nT);
+    });
+    rp.querySelectorAll('[data-i18n-p]').forEach(function(el) {
+      el.placeholder = t(el.dataset.i18nP);
+    });
+  }
+  if (typeof readerUltra === 'function') {
+    var u2 = readerUltra();
+    if (u2 && typeof u2.isConnected === 'function' && u2.isConnected()) {
+      readerSetStatus(t('readerConnected'), true);
+    }
+  }
+  // Update toggle button texts based on actual panel state
+  var rp2 = document.getElementById('readerPanel');
+  if (rp2) {
+    var isOpen = !rp2.classList.contains('hidden');
+
+  }
 }
 
 function slotData(slot) { return slot === 'A' ? state.fileA : state.fileB; }
@@ -1698,6 +2054,8 @@ function renderSlotBar() {
     e.stopPropagation();
     loadFileSlot(b.dataset.load);
   }));
+  document.getElementById('readerFileBtn')?.classList.remove('hidden');
+  readerUpdateSniffList();
 }
 
 function loadFileSlot(slot) {
@@ -1709,6 +2067,43 @@ function switchView(slot) {
   state.currentView = slot;
   renderSlotBar();
   renderCurrentView();
+  readerUpdateSniffList();
+  // Respect reader panel state
+  var rp = document.getElementById('readerPanel');
+  if (rp && !rp.classList.contains('hidden')) {
+    var tabs = document.getElementById('tabs');
+    var slotBar = document.getElementById('slotBar');
+    var fileInfo = document.getElementById('fileInfo');
+    tabs.classList.add('hidden');
+    slotBar.classList.add('hidden');
+    slotBar.style.display = 'none';
+    fileInfo.classList.add('hidden');
+    fileInfo.style.display = 'none';
+    document.querySelector('.subtitle').classList.add('hidden');
+    document.querySelector('.drop-zone').classList.add('hidden');
+  }
+  // Refresh reader panel language
+  var rp = document.getElementById('readerPanel');
+  if (rp && !rp.classList.contains('hidden')) {
+    rp.querySelectorAll('[data-i18n-t]').forEach(function(el) {
+      if (el.children.length === 0) el.textContent = t(el.dataset.i18nT);
+    });
+    rp.querySelectorAll('[data-i18n-p]').forEach(function(el) {
+      el.placeholder = t(el.dataset.i18nP);
+    });
+  }
+  if (typeof readerUltra === 'function') {
+    var u2 = readerUltra();
+    if (u2 && typeof u2.isConnected === 'function' && u2.isConnected()) {
+      readerSetStatus(t('readerConnected'), true);
+    }
+  }
+  // Update toggle button texts based on actual panel state
+  var rp2 = document.getElementById('readerPanel');
+  if (rp2) {
+    var isOpen = !rp2.classList.contains('hidden');
+
+  }
 }
 
 // ============================================================
@@ -1721,7 +2116,7 @@ function buildFrameTable(container, frames, detailPrefix) {
   }
   let html = `<table class="frame-table">
     <thead><tr>
-      <th>#</th><th>${t('colDir')}</th><th>${t('colType')}</th><th>${t('colBits')}</th><th>${t('colBytes')}</th><th>${t('colDataHex')}</th><th>${t('colAscii')}</th>
+      <th>#</th><th>${t('colDir')}</th><th>${t('colType')}</th><th>${t('colBits')}</th><th>${t('colBytes')}</th><th>${t('colDataHex')}</th><th>${t('colAscii')}</th><th></th>
     </tr></thead><tbody>`;
   for (const f of frames) {
     const dirClass = f.isTx ? 'dir-tx' : 'dir-rx';
@@ -1731,6 +2126,7 @@ function buildFrameTable(container, frames, detailPrefix) {
     const typeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
     const desc = describeFrame(f);
     const did = detailPrefix + '-' + f.index;
+    const hexSend = Array.from(f.data).map(b => b.toString(16).padStart(2,'0')).join(' ');
     html += `<tr class="frame-row" data-idx="${f.index}" data-detail="${did}">
       <td>${f.index}</td>
       <td><span class="${dirClass}">${dirLabel}</span></td>
@@ -1739,9 +2135,10 @@ function buildFrameTable(container, frames, detailPrefix) {
       <td>${f.data.length}</td>
       <td class="hex-bytes"><span class="byte-val">${hexStr}</span></td>
       <td class="ascii-col">${asciiStr}</td>
+      <td>${!f.isTx ? `<button class="frame-send-btn" data-hex="${hexSend}" title="Replay via Reader">▶</button>` : ''}</td>
     </tr>
     <tr class="detail-row hidden" id="${did}">
-      <td colspan="7">
+      <td colspan="8">
         <div class="detail-card">
           <div class="detail-title">${desc.title}</div>
           <div class="detail-body">${desc.detail}</div>
@@ -1756,6 +2153,18 @@ function buildFrameTable(container, frames, detailPrefix) {
       const did = row.dataset.detail;
       const detailRow = document.getElementById(did);
       if (detailRow) detailRow.classList.toggle('hidden');
+    });
+  });
+  container.querySelectorAll('.frame-send-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const hex = btn.dataset.hex;
+      if (hex && typeof readerParseAndSend === 'function') {
+        if (document.getElementById('readerPanel').classList.contains('hidden'))
+          readerTogglePanel();
+        document.getElementById('readerCmdInput').value = hex;
+        readerParseAndSend(hex);
+      }
     });
   });
 }
@@ -2166,6 +2575,7 @@ function processFile(file, slot) {
       renderSlotBar();
       showFileInfo();
       renderCurrentView();
+      updateStatus();
     } catch (err) {
       showError(t('errorPrefix') + err.message);
     }
@@ -2185,6 +2595,436 @@ function hideError() {
   el.classList.add('hidden');
   el.style.display = 'none';
 }
+
+// ============================================================
+//  Reader — ChameleonUltra via SDK (taichunmin/chameleon-ultra.js)
+// ============================================================
+let ultraBle, ultraSerial, readerLogs = [], readerLastSentHex = null;
+
+function readerInit() {
+  if (typeof ChameleonUltraJS === 'undefined') {
+    // SDK not loaded yet
+    setTimeout(readerInit, 500);
+    return;
+  }
+  const { ChameleonUltra, Debug, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS;
+  ultraSerial = new ChameleonUltra();
+  ultraSerial.use(new Debug());
+  ultraSerial.use(new WebserialAdapter());
+  ultraBle = new ChameleonUltra();
+  ultraBle.use(new Debug());
+  ultraBle.use(new WebbleAdapter());
+}
+
+function readerUltra() {
+  return document.querySelector('input[name="connType"]:checked').value === 'serial' ? ultraSerial : ultraBle;
+}
+
+function readerBuf(bytes) {
+  // SDK uses @taichunmin/buffer, not native Uint8Array
+  const B = ChameleonUltraJS.Buffer;
+  if (bytes instanceof B) return bytes;
+  if (bytes.buffer) return B.fromView(bytes);
+  return B.from(bytes);
+}
+
+function readerLog(dir, dataOrMsg, desc) {
+  const t = new Date();
+  const ts = t.toLocaleTimeString('en-US', { hour12: false }) + '.' + String(t.getMilliseconds()).padStart(3, '0');
+  let hex = '', ascii = '';
+  if (dataOrMsg && typeof dataOrMsg === 'object' && dataOrMsg.buffer) {
+    const u = new Uint8Array(dataOrMsg.byteLength || dataOrMsg.length);
+    try { u.set(typeof dataOrMsg === 'string' ? new TextEncoder().encode(dataOrMsg) : new Uint8Array(dataOrMsg.buffer || dataOrMsg)); } catch {}
+    hex = Array.from(u).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    ascii = Array.from(u).map(b => b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : '.').join('');
+  } else if (typeof dataOrMsg === 'string') {
+    hex = dataOrMsg;
+  }
+  readerLogs.push({ dir, ts, hex, ascii, desc: desc || '' });
+  readerRenderLog();
+}
+
+function readerRenderLog() {
+  const wrap = document.getElementById('readerLogWrap');
+  const empty = document.getElementById('readerLogEmpty');
+  if (!wrap) return;
+  if (!readerLogs.length) { empty.classList.remove('hidden'); wrap.classList.add('hidden'); return; }
+  empty.classList.add('hidden'); wrap.classList.remove('hidden');
+  wrap.innerHTML = readerLogs.map(e =>
+    `<div class="reader-log-entry ${e.dir}">
+      <span class="reader-log-dir">${e.dir === 'tx' ? 'TX' : e.dir === 'rx' ? 'RX' : 'INF'}</span>
+      <span class="reader-log-time">${e.ts}</span>
+      <span class="reader-log-data">${e.dir === 'inf' ? e.hex : escapeHtml(e.hex)}</span>
+      ${e.ascii ? `<span class="reader-log-ascii">${escapeHtml(e.ascii)}</span>` : ''}
+      ${e.desc ? `<span class="reader-log-desc">${e.dir === 'inf' ? e.desc : escapeHtml(e.desc)}</span>` : ''}
+    </div>`
+  ).join('');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function readerSetStatus(text, connected) {
+  document.getElementById('readerStatusText').textContent = text;
+  document.querySelector('#readerStatus .dot').classList.toggle('connected', connected);
+}
+
+function readerUpdateSniffList() {
+  var nameEl = document.getElementById('readerSniffName');
+  var countEl = document.getElementById('readerFrameCount');
+  var body = document.getElementById('readerChatBody');
+  var empty = document.getElementById('readerChatEmpty');
+  var data = slotData(state.currentView);
+  if (!data || data.type !== 'hf' || !data.frames) {
+    if (nameEl) nameEl.textContent = '---';
+    if (countEl) countEl.textContent = '';
+    if (body) body.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+  if (nameEl) nameEl.textContent = data.name;
+  if (empty) empty.classList.add('hidden');
+
+  var cmds = data.frames.filter(function(f) { return !f.isTx; });
+  if (countEl) countEl.textContent = '(' + cmds.length + ' reader cmds)';
+
+  var html = '';
+  for (var i = 0; i < cmds.length; i++) {
+    var f = cmds[i];
+    var hexStr = Array.from(f.data).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+    var asciiStr = Array.from(f.data).map(function(b) { return b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : '.'; }).join('');
+    var desc = describeFrame(f);
+    var msgTypeClass = 'frame-' + f.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
+    html += '<div class="message reader" data-hex="' + hexStr + '" data-idx="' + f.index + '">'
+      + '<div class="msg-avatar">&#x1F4E1;</div>'
+      + '<div class="msg-bubble">'
+      + '<div class="msg-header">'
+      + '<span class="msg-sender">Reader</span>'
+      + '<span class="msg-type ' + msgTypeClass + '">' + f.frameType + '</span>'
+      + '<span class="msg-number">#' + f.index + '</span>'
+      + '</div>'
+      + '<div class="msg-hex">' + hexStr + '</div>'
+      + '<div class="msg-ascii">' + escapeHtml(asciiStr) + '</div>'
+      + '<div class="msg-desc">' + escapeHtml(desc.title + ' — ' + desc.detail) + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+  if (!html) { body.innerHTML = '<div class="reader-chat-empty">No reader commands</div>'; return; }
+  body.innerHTML = html;
+
+  body.querySelectorAll('.message.reader').forEach(function(el) {
+    el.addEventListener('click', function() {
+      body.querySelectorAll('.message').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+      var hex = this.dataset.hex;
+      var idx = parseInt(this.dataset.idx);
+      document.getElementById('readerCmdInput').value = hex;
+      readerParseAndSend(hex);
+      readerShowRef(idx, hex);
+    });
+  });
+}function readerShowRef(cmdIdx, cmdHex) {
+  var refBody = document.getElementById('readerRefBody');
+  var refCount = document.getElementById('readerRefCount');
+  var data = slotData(state.currentView);
+  if (!data || !data.frames) return;
+  // Find the first tag response after this cmd
+  var refMsg = null;
+  for (var i = cmdIdx + 1; i < data.frames.length; i++) {
+    if (data.frames[i].isTx) { refMsg = data.frames[i]; break; }
+  }
+  if (!refMsg) {
+    refBody.innerHTML = '<div class="reader-chat-empty" style="padding:8px">No sniff response for this command</div>';
+    refCount.textContent = '(0)';
+    return;
+  }
+  var hexStr = Array.from(refMsg.data).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+  var asciiStr = Array.from(refMsg.data).map(function(b) { return b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : '.'; }).join('');
+  var desc = describeFrame(refMsg);
+  var msgTypeClass = 'frame-' + refMsg.frameType.toLowerCase().replace(/[^a-z0-9]/g, '');
+  refBody.innerHTML = '<div class="message tag" data-hex="' + hexStr + '">'
+    + '<div class="msg-avatar">&#x1F4F6;</div>'
+    + '<div class="msg-bubble">'
+    + '<div class="msg-header"><span class="msg-sender">Tag</span>'
+    + '<span class="msg-type ' + msgTypeClass + '">' + refMsg.frameType + '</span>'
+    + '<span class="msg-number">#' + refMsg.index + '</span></div>'
+    + '<div class="msg-hex">' + hexStr + '</div>'
+    + '<div class="msg-ascii">' + escapeHtml(asciiStr) + '</div>'
+    + '<div class="msg-desc">' + escapeHtml(desc.title + ' — ' + desc.detail) + '</div>'
+    + '</div>'
+    + '</div>';
+  refCount.textContent = '(1)';
+}async function readerScanAll() {
+  var ultra = readerUltra();
+  if (!ultra.isConnected()) {
+    readerLog('inf', 'Auto-connecting...');
+    await readerConnect();
+    await new Promise(function(r) { setTimeout(r, 200); });
+    ultra = readerUltra();
+    if (!ultra.isConnected()) { readerLog('inf', 'Not connected'); return; }
+  }
+  var btns = document.querySelectorAll('.reader-scan-btn');
+  btns.forEach(function(b) { b.disabled = true; });
+  readerClearReal();
+  try {
+    // 1. Try HF scan first
+    var tags = null;
+    try { tags = await ultra.cmdHf14aScan(); } catch(e) {}
+    if (tags && tags.length) {
+      var tag = tags[0];
+      var uidHex = Array.from(tag.uid).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+      var info = 'UID: ' + uidHex;
+      // SAK + card type
+      if (tag.sak) {
+        info += ' SAK:0x' + tag.sak[0].toString(16).padStart(2, '0');
+        var sakKey = 'sakKnown' + tag.sak[0].toString(16).padStart(2, '0');
+        var sakName = window.t(sakKey);
+        if (sakName !== sakKey) info += ' <span style="color:var(--accent)">(' + sakName + ')</span>';
+      }
+      if (tag.atqa) info += ' ATQA:' + Array.from(tag.atqa).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      // Detect card features
+      try { var mf = await ultra.cmdMf1IsSupport(); info += ' <span style="color:var(--green)">MIFARE:' + (mf ? 'yes' : 'no') + '</span>'; } catch(e) {}
+      try { var g1 = await ultra.cmdMf1GetGen1aMode(); info += ' <span style="color:' + (g1 ? 'var(--orange)' : 'var(--text-faint)') + '">gen1a:' + g1 + '</span>'; } catch(e) {}
+      try { var g2 = await ultra.cmdMf1GetGen2Mode(); info += ' <span style="color:' + (g2 ? 'var(--orange)' : 'var(--text-faint)') + '">gen2:' + g2 + '</span>'; } catch(e) {}
+      try { var nm = await ultra.cmdMf0NtagGetUidMagicMode(); info += ' <span style="color:' + (nm ? 'var(--orange)' : 'var(--text-faint)') + '">NTAG_magic:' + nm + '</span>'; } catch(e) { info += ' NTAG:no'; }
+      // Read block 0
+      try {
+        var block0 = null;
+        try { block0 = await ultra.cmdMf1ReadBlock(0); } catch(e) {}
+        if (!block0) {
+          var defaultKeys = ['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7'];
+          var keyBufs = defaultKeys.map(function(k) {
+            var b = new Uint8Array(6);
+            for (var j = 0; j < 6; j++) b[j] = parseInt(k.substr(j*2, 2), 16);
+            return readerBuf(b);
+          });
+          try { var result = await ultra.mf1ReadSectorByKeys(0, keyBufs); if (result && result.data) block0 = result.data.slice(0, 16); } catch(e2) {}
+        }
+        if (block0 && block0.length) {
+          var b0Hex = Array.from(block0.slice(0, 4)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+          info += ' Block0:' + b0Hex + '...';
+          if (tag.uid[0] !== block0[0]) info += ' <span style="color:var(--orange)">UID_mismatch=magic</span>';
+          if (block0.length > 5) {
+            var sakFromBlock = block0[5];
+            var sakKey2 = 'sakKnown' + sakFromBlock.toString(16).padStart(2, '0');
+            var sakName2 = window.t(sakKey2);
+            if (sakName2 !== sakKey2) info += ' <span style="color:var(--accent)">&rarr;' + sakName2 + '</span>';
+          }
+        } else { info += ' <span style="color:var(--text-faint)">Block0:locked</span>'; }
+      } catch(e) { info += ' <span style="color:var(--text-faint)">Block0:nonMIFARE</span>'; }
+      readerAddRealResponse(tag.uid, info);
+    } else {
+      readerLog('inf', 'No HF tag - trying LF...');
+      // 2. Try LF scans
+      try {
+        var em = await ultra.cmdEm410xScan();
+        if (em && em.length) { readerLog('inf', 'EM410x tag found'); readerAddRealResponse(em[0].uid, 'EM410x UID'); btns.forEach(function(b) { b.disabled = false; }); return; }
+      } catch(e) {}
+      try {
+        var hp = await ultra.cmdHidProxScan();
+        if (hp && hp.length) { readerLog('inf', 'HID Prox tag found'); readerAddRealResponse(hp[0].uid, 'HID Prox UID'); btns.forEach(function(b) { b.disabled = false; }); return; }
+      } catch(e) {}
+      try {
+        var vk = await ultra.cmdVikingScan();
+        if (vk && vk.length) { readerLog('inf', 'Viking tag found'); readerAddRealResponse(vk[0].uid, 'Viking UID'); btns.forEach(function(b) { b.disabled = false; }); return; }
+      } catch(e) {}
+      readerLog('inf', 'No tag found on any frequency');
+    }
+  } catch(err) {
+    readerLog('inf', 'Scan error: ' + err.message);
+  }
+  btns.forEach(function(b) { b.disabled = false; });
+}
+
+async function readerScan(type) {
+  var ultra = readerUltra();
+  if (!ultra.isConnected()) { readerLog('inf', 'Not connected'); return; }
+  var btns = document.querySelectorAll('.reader-scan-btn');
+  btns.forEach(function(b) { b.disabled = true; });
+  try {
+    var result;
+    switch(type) {
+      case 'hf': result = await ultra.cmdHf14aScan(); break;
+      case 'em410x': result = await ultra.cmdEm410xScan(); break;
+      case 'hidprox': result = await ultra.cmdHidProxScan(); break;
+      case 'viking': result = await ultra.cmdVikingScan(); break;
+    }
+    if (result && result.length) {
+      readerLog('inf', type + ' scan: found ' + result.length + ' tag(s)');
+      for (var i = 0; i < result.length; i++) {
+        var r = result[i];
+        var hex = Array.from(r.uid).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+        var extra = '';
+        if (r.sak) {
+          var sakVal = r.sak[0];
+          var proto = (sakVal & 0x20) ? 'ISO 14443-4 (T=CL)' : 'ISO 14443-3';
+          var uidSize = (sakVal & 0x04) ? 'UID 7B' : 'UID 4B';
+          extra = proto + ' ' + uidSize;
+        }
+        if (r.atqa) extra += ' ATQA:' + Array.from(r.atqa).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+        if (r.ats) extra += ' ATS:' + Array.from(r.ats).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+        readerAddRealResponse(r.uid, type.toUpperCase() + ' ' + (extra || 'UID: ' + hex));
+        if (r.rawData) readerAddRealResponse(r.rawData, 'raw response');
+      }
+    } else {
+      readerLog('inf', type + ' scan: no tag found');
+    }
+  } catch(err) {
+    readerLog('inf', type + ' scan error: ' + err.message);
+  }
+  btns.forEach(function(b) { b.disabled = false; });
+}
+
+function readerClearReal() { var b = document.getElementById("readerRealBody"); if(b) { b.innerHTML = '<div class="reader-chat-empty" style="padding:12px">' + t('readerNoResp') + '</div>'; var cnt = document.getElementById("readerRespCount"); if(cnt) cnt.textContent = ""; } }
+
+function readerAddRealResponse(data, desc, afterHex) {
+  var body = document.getElementById('readerRealBody');
+  if (!body) return;
+  var empty = body.querySelector('.reader-chat-empty');
+  if (empty) empty.style.display = 'none';
+  var hexStr = Array.from(data).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+  var asciiStr = Array.from(data).map(function(b) { return b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : '.'; }).join('');
+  var frameType = desc && desc.indexOf('SCAN') >= 0 ? 'SCAN' : 'RESP';
+  var frameDesc = desc || '';
+  if (!desc) try {
+    frameType = detectFrameType(data, true, null);
+    if (frameType === 'S-BLOCK' && data.length <= 6 && data.length >= 4) frameType = 'UID';
+    var d = describeFrame({ frameType: frameType, data: data, isTx: true });
+    frameDesc = d.title + ' — ' + d.detail;
+  } catch(e) {}
+  var ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  var el = document.createElement('div');
+  el.className = 'message tag';
+  el.innerHTML = '<div class="msg-avatar">&#x1F4F6;</div>'
+    + '<div class="msg-bubble">'
+    + '<div class="msg-header"><span class="msg-sender">Tag</span>'
+    + '<span class="msg-type frame-' + frameType.toLowerCase().replace(/[^a-z0-9]/g, '') + '">' + frameType + '</span>'
+    + '<span class="msg-number">' + ts + '</span></div>'
+    + '<div class="msg-hex">' + hexStr + '</div>'
+    + '<div class="msg-ascii">' + escapeHtml(asciiStr) + '</div>'
+    + '<div class="msg-desc">' + (desc && desc.indexOf('<span') >= 0 ? frameDesc : escapeHtml(frameDesc)) + '</div>'
+    + '</div>';
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+}
+
+function readerTogglePanel() {
+  const panel = document.getElementById('readerPanel');
+  panel.classList.toggle('hidden');
+  const nowOpen = !panel.classList.contains('hidden');
+  document.querySelectorAll('.reader-toggle-btn').forEach(function(b) { b.classList.toggle('active', nowOpen); });
+  var tt = document.getElementById('readerToggleText');
+  if (tt) tt.textContent = nowOpen ? 'Close' : 'Reader';
+  document.getElementById('tabs').classList.toggle('hidden', !isOpen);
+  document.getElementById('slotBar').classList.toggle('hidden', !isOpen);
+  document.getElementById('fileInfo').classList.toggle('hidden', !isOpen);
+  document.querySelector('.subtitle').classList.toggle('hidden', !isOpen);
+  document.querySelector('.drop-zone').classList.toggle('hidden', !isOpen);
+  document.getElementById('errorBox').classList.add('hidden');
+  if (!panel.classList.contains('hidden')) {
+    panel.querySelectorAll('[data-i18n-t]').forEach(function(el) { el.innerHTML = t(el.dataset.i18nT); });
+  }
+}
+
+async function readerConnect() {
+  const ultra = readerUltra();
+  try {
+    ultra.emitter.on('error', err => {
+      readerLog('inf', `ERR: ${err.message}`);
+    });
+    ultra.emitter.on('debug', (ns, ...args) => {
+      if (ns === 'webserial' || ns === 'webble') {
+        args.forEach(a => {
+          if (typeof a === 'string' && a.length < 200) readerLog('inf', a);
+        });
+      }
+    });
+    await ultra.connect();
+    readerSetStatus('Connected', true);
+    readerLog('inf', 'Connected to ChameleonUltra');
+    document.getElementById('readerConnectBtn').classList.add('hidden');
+    document.getElementById('readerDisconnectBtn').classList.remove('hidden');
+    document.getElementById('readerSendBtn').disabled = false;
+  } catch (err) {
+    readerLog('inf', `Connect failed: ${err.message}`);
+    readerSetStatus('Connection failed', false);
+  }
+}
+
+async function readerDisconnect() {
+  try {
+    const ultra = readerUltra();
+    if (ultra.isConnected()) await ultra.disconnect();
+  } catch {}
+  readerSetStatus('Disconnected', false);
+  document.getElementById('readerConnectBtn').classList.remove('hidden');
+  document.getElementById('readerDisconnectBtn').classList.add('hidden');
+  document.getElementById('readerSendBtn').disabled = true;
+  readerLog('inf', 'Disconnected');
+}
+
+const RAW_OPTS = { activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false };
+
+async function readerSend(data) {
+  if (!data || !data.length) return;
+  try {
+    let ultra = readerUltra();
+    if (!ultra.isConnected()) {
+      await readerConnect();
+      await new Promise(function(r) { setTimeout(r, 200); });
+      ultra = readerUltra();
+      if (!ultra.isConnected()) throw new Error('Connect failed');
+    }
+    const buf = readerBuf(data);
+    // Auto-detect 7-bit short frames
+    const opts = data.length === 1 && (data[0] === 0x26 || data[0] === 0x52)
+      ? { ...RAW_OPTS, dataBitLength: 7 }
+      : RAW_OPTS;
+    const resp = await ultra.cmdHf14aRaw({ data: buf, ...opts });
+    readerLastSentHex = Array.from(data).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+    readerLog('tx', data);
+    if (resp && resp.length) {
+      readerLog('rx', resp, `${resp.length} byte${resp.length > 1 ? 's' : ''}`);
+      readerAddRealResponse(resp, null, readerLastSentHex);
+    } else {
+      readerLog('inf', 'no response');
+    }
+  } catch (err) {
+    readerLog('inf', `send error: ${err.message}`);
+  }
+}
+
+function readerParseAndSend(input) {
+  input = input.trim();
+  if (!input) return;
+  const hexClean = input.replace(/\s+/g, '');
+  if (/^[0-9a-fA-F]+$/.test(hexClean) && hexClean.length > 0 && hexClean.length % 2 === 0) {
+    const bytes = [];
+    for (let i = 0; i < hexClean.length; i += 2) bytes.push(parseInt(hexClean.substr(i, 2), 16));
+    readerSend(Uint8Array.from(bytes));
+  } else {
+    readerLog('inf', 'enter hex bytes (e.g. 26, 93 20, 50 00 57 cd)');
+  }
+}
+
+// Wire reader UI
+readerInit();
+document.getElementById('readerConnectBtn').addEventListener('click', readerConnect);
+document.getElementById('readerToggle').addEventListener('click', readerTogglePanel);
+document.getElementById('readerDisconnectBtn').addEventListener('click', readerDisconnect);
+document.getElementById('readerSendBtn').addEventListener('click', () => {
+  readerParseAndSend(document.getElementById('readerCmdInput').value);
+});
+document.getElementById('readerCmdInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') readerParseAndSend(e.target.value);
+});
+document.getElementById('readerClearLogBtn').addEventListener('click', () => {
+  readerLogs = []; readerRenderLog();
+});
+document.querySelectorAll('#readerPresets .reader-preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('readerCmdInput').value = btn.dataset.hex;
+    readerParseAndSend(btn.dataset.hex);
+  });
+});
 
 // ============================================================
 //  Drag & drop + click wiring
