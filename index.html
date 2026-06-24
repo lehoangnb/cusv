@@ -3588,11 +3588,29 @@ function readerTogglePanel() {
   document.querySelectorAll('.reader-toggle-btn').forEach(function(b) { b.classList.toggle('active', nowOpen); });
   var tt = document.getElementById('readerToggleText');
   if (tt) tt.textContent = nowOpen ? 'Close' : 'Reader';
-  document.getElementById('tabs').classList.toggle('hidden', !nowOpen);
-  document.getElementById('slotBar').classList.toggle('hidden', !nowOpen);
-  document.getElementById('fileInfo').classList.toggle('hidden', !nowOpen);
-  document.querySelector('.subtitle').classList.toggle('hidden', !nowOpen);
-  document.querySelector('.drop-zone').classList.toggle('hidden', !nowOpen);
+  var hasFile = state.fileA || state.fileB;
+  if (nowOpen) {
+    // Reader opened → hide main UI unconditionally
+    document.getElementById('tabs').classList.add('hidden');
+    document.getElementById('slotBar').classList.add('hidden');
+    document.getElementById('fileInfo').classList.add('hidden');
+    document.querySelector('.subtitle').classList.add('hidden');
+    document.querySelector('.drop-zone').classList.add('hidden');
+  } else {
+    // Reader closed → restore main UI
+    document.querySelector('.subtitle').classList.remove('hidden');
+    document.querySelector('.drop-zone').classList.remove('hidden');
+    document.querySelector('.subtitle').style.display = '';
+    document.querySelector('.drop-zone').style.display = '';
+    if (hasFile) {
+      document.getElementById('tabs').style.display = 'block';
+      document.getElementById('slotBar').style.display = 'flex';
+      document.getElementById('fileInfo').style.display = 'flex';
+      document.getElementById('tabs').classList.remove('hidden');
+      document.getElementById('slotBar').classList.remove('hidden');
+      document.getElementById('fileInfo').classList.remove('hidden');
+    }
+  }
   document.getElementById('errorBox').classList.add('hidden');
   if (!panel.classList.contains('hidden')) {
     panel.querySelectorAll('[data-i18n-t]').forEach(function(el) { el.innerHTML = t(el.dataset.i18nT); });
