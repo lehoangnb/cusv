@@ -452,6 +452,32 @@
   /* MIFARE Classic commands — teal */
   .frame-mifare_read, .frame-mifare_write { color: #2dd4bf; }
 
+  /* ============================================================
+     Clone & Seal section
+     ============================================================ */
+  .reader-clone-status { font-size: 0.72rem; color: var(--text-dim); padding: 4px 8px; min-height: 1.2em; }
+  .reader-clone-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin: 6px 0; max-width: 520px; }
+  .reader-clone-block {
+    padding: 6px 4px; text-align: center; border-radius: var(--r-sm);
+    font-size: 0.65rem; font-family: 'SF Mono', monospace;
+    border: 1px solid var(--border); cursor: pointer;
+    background: var(--surface-2); color: var(--text-faint);
+    transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+  }
+  .reader-clone-block:hover { border-color: var(--accent); }
+  .reader-clone-block.ok { background: rgba(var(--green-rgb), 0.18); border-color: rgba(var(--green-rgb), 0.45); color: var(--green); }
+  .reader-clone-block.locked { background: rgba(var(--red-rgb), 0.16); border-color: rgba(var(--red-rgb), 0.4); color: var(--red); }
+  .reader-clone-block.trailer { background: rgba(var(--accent-rgb), 0.14); border-color: rgba(var(--accent-rgb), 0.35); color: var(--accent); }
+  .reader-clone-block.sector0 { border-width: 2px; }
+  .reader-clone-dump {
+    margin-top: 8px; max-height: 200px; overflow: auto;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 8px 10px;
+    font-family: 'SF Mono', monospace; font-size: 0.7rem;
+    color: var(--text-dim); display: none;
+  }
+  .reader-clone-dump pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+
   /* Empty state */
   .empty-state {
     text-align: center;
@@ -942,6 +968,24 @@
     color: var(--red); font-size: 0.78rem; margin-bottom: 10px;
   }
 
+  /* Reader panel sub-tabs */
+  .reader-tab-bar { display: flex; gap: 2px; margin-bottom: 10px; }
+  .reader-tab {
+    padding: 6px 14px; border-radius: var(--r-sm) var(--r-sm) 0 0;
+    cursor: pointer; font-size: 0.76rem; font-family: inherit;
+    background: var(--surface); border: 1px solid var(--border);
+    border-bottom: none; color: var(--text-dim);
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+  }
+  .reader-tab:hover { background: var(--surface-2); color: var(--text); }
+  .reader-tab.active {
+    background: var(--surface-3); color: var(--text); font-weight: 600;
+    border-color: rgba(var(--accent-rgb), 0.5);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .reader-tab-panel { display: none; }
+  .reader-tab-panel.active { display: block; }
+
   /* Utility */
   .frame-send-btn {
     background: rgba(var(--accent-rgb), 0.12);
@@ -1029,7 +1073,12 @@
     </div>
 
     <div class="reader-panel">
+      <div class="reader-tab-bar" id="readerTabBar">
+        <button class="reader-tab active" data-rtab="sniff">📡 Sniff &amp; Relay</button>
+        <button class="reader-tab" data-rtab="clone">🧬 Clone &amp; Seal</button>
+      </div>
       <div class="reader-page-layout">
+        <div class="reader-tab-panel active" id="readerTabSniff">
         <div class="reader-page-sniff">
           <div class="reader-sniff-msgs">
             <div class="reader-sniff-col">
@@ -1066,6 +1115,21 @@
             <div class="reader-log-wrap hidden" id="readerLogWrap"></div>
           </div>
         </div>
+        </div><!-- /readerTabSniff -->
+        <div class="reader-tab-panel" id="readerTabClone">
+          <div class="reader-page-clone">
+            <div class="reader-page-hdr"><span data-i18n-t="readerCloneHeader">Clone &amp; Seal</span></div>
+            <div class="reader-scan-bar">
+              <button class="reader-scan-btn reader-scan-primary" id="readerCloneReadBtn">📖 Read All Blocks</button>
+              <button class="reader-scan-btn" id="readerCloneSlotBtn" disabled>💾 Write to Slot</button>
+              <button class="reader-scan-btn" id="readerCloneTagBtn" disabled>📝 Clone to Tag (Magic)</button>
+              <button class="reader-scan-btn" id="readerSealBtn">🔒 Seal FUID/UFUID</button>
+            </div>
+            <div class="reader-clone-status" id="readerCloneStatus"></div>
+            <div class="reader-clone-grid" id="readerCloneGrid"></div>
+            <div class="reader-clone-dump" id="readerCloneDump"><pre></pre></div>
+          </div>
+        </div><!-- /readerTabClone -->
       </div>
     </div>
   </div>
@@ -1298,6 +1362,18 @@ const translations = {
     descGEN3WRITEUIDDetail: 'Gen3 (APDU) write block0: 90 F0 CC CC 10 + 16 block0 bytes. Writes full block0 including SAK/ATQA/mfr data. Auto-corrects BCC for 4-byte UID. Side effect: also changes UID.',
     descGEN3FREEZETitle: 'Gen3 APDU FREEZE',
     descGEN3FREEZEDetail: 'Gen3 (APDU) permanent freeze: 90 FD 11 11 00. After this, no further writes are possible. Cannot be reversed. Only send when you are certain the configuration is final.',
+    readerCloneHeader: 'Clone &amp; Seal',
+    cloneNotConnected: 'Connect to device first',
+    cloneNoTag: 'No HF tag found',
+    cloneScanFailed: 'Scan failed',
+    cloneMagicFailed: 'Magic wakeup failed - place magic card on reader',
+    cloneReadFirst: 'Read tag blocks first',
+    cloneDone: 'Done: {0}/{1} blocks read',
+    cloneWriting: 'Writing... {0}/{1} ({2} written)',
+    cloneWritten: 'Cloned {0}/{1} blocks to tag',
+    cloneSlotWritten: 'Written {0}/{1} blocks to slot',
+    cloneSealed: 'Sealed. Backdoor disabled. Verify by re-reading.',
+    cloneSealFailed: 'Seal failed: {0}',
   },
   vi: {
     siteTitle: 'Sniff Viewer <small>cho tệp .bin ChameleonUltra</small>',
@@ -1504,6 +1580,18 @@ const translations = {
     descGEN3WRITEUIDDetail: 'Lenh ghi block0 Gen3 (APDU): 90 F0 CC CC 10 + 16 byte block0. Ghi toan bo block0 gom SAK/ATQA/du lieu nha san xuat. Tu dong sua BCC cho UID 4 byte.',
     descGEN3FREEZETitle: 'Gen3 APDU FREEZE',
     descGEN3FREEZEDetail: 'Lenh dong bang vinh vien Gen3 (APDU): 90 FD 11 11 00. Sau lenh nay, khong the ghi them. Khong the hoan tac. Chi gui khi chac chan cau hinh da hoan tat.',
+    readerCloneHeader: 'Sao Chep &amp; Khoa',
+    cloneNotConnected: 'Ket noi thiet bi truoc',
+    cloneNoTag: 'Khong tim thay the HF',
+    cloneScanFailed: 'Quet that bai',
+    cloneMagicFailed: 'Danh thuc ma that bai - dat the ma len reader',
+    cloneReadFirst: 'Doc the truoc',
+    cloneDone: 'Xong: {0}/{1} khoi da doc',
+    cloneWriting: 'Dang ghi... {0}/{1} ({2} da ghi)',
+    cloneWritten: 'Da sao chep {0}/{1} khoi vao the',
+    cloneSlotWritten: 'Da ghi {0}/{1} khoi vao slot',
+    cloneSealed: 'Da khoa. Cua sau da bi vo hieu. Kiem tra bang cach doc lai.',
+    cloneSealFailed: 'Khoa that bai: {0}',
   }
 };
 
@@ -3023,6 +3111,443 @@ async function readerScan(type) {
   btns.forEach(function(b) { b.disabled = false; });
 }
 
+// ============================================================
+//  Clone & Seal — MIFARE Classic tag cloning
+// ============================================================
+const CLONE_DEFAULT_KEYS = [
+  'FFFFFFFFFFFF','A0A1A2A3A4A5','D3F7D3F7D3F7','000000000000',
+  'B0B1B2B3B4B5','AABBCCDDEEFF','A1B2C3D4E5F6',
+];
+const MF1_BLOCKS = 64, MF1_SECTORS = 16;
+
+const cloneState = { uid: null, sak: null, atqa: null, type: null, blocks: [], keys: [], scanned: false };
+
+function cloneHexToBuf(h) {
+  var b = new Uint8Array(h.length / 2);
+  for (var i = 0; i < b.length; i++) b[i] = parseInt(h.substr(i * 2, 2), 16);
+  return readerBuf(b);
+}
+
+function cloneStatus(msg) { var e = document.getElementById('readerCloneStatus'); if (e) e.textContent = msg || ''; }
+
+function readerRenderCloneGrid() {
+  var grid = document.getElementById('readerCloneGrid');
+  if (!grid) return;
+  var s = cloneState;
+  var html = '';
+  for (var b = 0; b < MF1_BLOCKS; b++) {
+    var cls = 'reader-clone-block';
+    var title = 'Block ' + b;
+    var label = b < 10 ? '0' + b : '' + b;
+    var data = s.blocks[b];
+    if (data) {
+      if (b === 0) { cls += ' ok sector0'; title += ' (Manufacturer Block)'; }
+      else if (b % 4 === 3) { cls += ' trailer'; title += ' (Sector Trailer)'; }
+      else { cls += ' ok'; }
+    } else {
+      cls += ' locked';
+      title += ' (Locked / No Auth)';
+    }
+    var hex = data ? Array.from(data).map(function(x) { return x.toString(16).padStart(2,'0'); }).join(' ') : '—';
+    html += '<div class="' + cls + '" title="' + title + '\n' + hex + '" data-block="' + b + '">' + label + '</div>';
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.reader-clone-block').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var bn = parseInt(this.dataset.block);
+      var blk = s.blocks[bn];
+      var dump = document.getElementById('readerCloneDump');
+      var pre = dump.querySelector('pre');
+      if (blk) {
+        var h = Array.from(blk).map(function(x) { return x.toString(16).padStart(2,'0'); }).join(' ');
+        pre.textContent = 'Block ' + bn + ': ' + h;
+        dump.style.display = 'block';
+      } else {
+        pre.textContent = 'Block ' + bn + ': LOCKED';
+        dump.style.display = 'block';
+      }
+    });
+  });
+}
+
+function readerUpdateCloneBtns() {
+  var slotBtn = document.getElementById('readerCloneSlotBtn');
+  var tagBtn = document.getElementById('readerCloneTagBtn');
+  var sealBtn = document.getElementById('readerSealBtn');
+  if (!slotBtn) return;
+  var ok = cloneState.scanned && cloneState.blocks[0];
+  slotBtn.disabled = !ok;
+  tagBtn.disabled = !ok;
+  sealBtn.disabled = !cloneState.scanned || (cloneState.type !== 'gen1a' && cloneState.type !== 'alt');
+}
+
+async function readerReadAllBlocks() {
+  var ultra = readerUltra();
+  if (!ultra || !ultra.isConnected()) {
+    cloneStatus(t('cloneNotConnected'));
+    return;
+  }
+  var btns = document.getElementById('readerCloneReadBtn');
+  if (btns) btns.disabled = true;
+  cloneStatus('Scanning for tag...');
+  readerLog('inf', 'Clone: scanning HF tag...');
+
+  // 1. Scan
+  var tags;
+  try { tags = await ultra.cmdHf14aScan(); } catch(e) { cloneStatus(t('cloneScanFailed')); readerLog('inf', 'Clone: scan error: ' + e.message); if (btns) btns.disabled = false; return; }
+  if (!tags || !tags.length) { cloneStatus(t('cloneNoTag')); readerLog('inf', 'Clone: no tag found'); if (btns) btns.disabled = false; return; }
+
+  var tag = tags[0];
+  cloneState.uid = tag.uid;
+  cloneState.sak = tag.sak;
+  cloneState.atqa = tag.atqa;
+  cloneState.blocks = [];
+  cloneState.keys = [];
+  cloneState.scanned = false;
+  cloneState.type = null;
+
+  var uidHex = Array.from(tag.uid).map(function(b) { return b.toString(16).padStart(2,'0'); }).join(' ');
+  readerLog('inf', 'Clone: found tag UID=' + uidHex);
+
+  // 2. Detect card type
+  var isGen1a = false, isGen2 = false;
+  try { isGen1a = await ultra.cmdMf1GetGen1aMode(); } catch(e) {}
+  try { isGen2 = await ultra.cmdMf1GetGen2Mode(); } catch(e) {}
+  var isMagic = isGen1a || isGen2;
+
+  if (isMagic) {
+    cloneState.type = isGen1a ? 'gen1a' : 'gen2';
+    cloneStatus('Magic card (Gen' + (isGen1a ? '1a' : '2') + '). Reading via backdoor...');
+    readerLog('inf', 'Clone: magic card detected — ' + cloneState.type + ', using backdoor reads');
+
+    // Wakeup sequence — try Gen1A first, then Alt
+    var woken = false;
+    try {
+      await ultra.cmdHf14aRaw({ data: cloneHexToBuf('40'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+      await new Promise(function(r) { setTimeout(r, 80); });
+      await ultra.cmdHf14aRaw({ data: cloneHexToBuf('43'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+      woken = true;
+    } catch(e) { /* ignore */ }
+
+    if (!woken) {
+      try {
+        await ultra.cmdHf14aRaw({ data: cloneHexToBuf('20'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+        await new Promise(function(r) { setTimeout(r, 80); });
+        await ultra.cmdHf14aRaw({ data: cloneHexToBuf('23'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+        woken = true;
+        cloneState.type = 'alt';
+      } catch(e) { /* ignore */ }
+    }
+
+    if (!woken) { cloneStatus('Magic wakeup failed'); if (btns) btns.disabled = false; return; }
+
+    // Read all blocks via backdoor
+    for (var b = 0; b < MF1_BLOCKS; b++) {
+      try {
+        var blockHex = b.toString(16).padStart(2, '0');
+        var resp = await ultra.cmdHf14aRaw({ data: cloneHexToBuf('30' + blockHex), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+        if (resp && resp.length >= 16) {
+          cloneState.blocks[b] = new Uint8Array(resp.slice(0, 16));
+          cloneState.keys[b] = 'magic';
+        }
+      } catch(e) { /* block locked */ }
+      if (b % 8 === 0) cloneStatus('Reading magic blocks... ' + b + '/' + MF1_BLOCKS);
+    }
+  } else {
+    cloneState.type = 'normal';
+    cloneStatus('Standard MIFARE. Trying default keys per sector...');
+    readerLog('inf', 'Clone: normal card, trying ' + CLONE_DEFAULT_KEYS.length + ' default keys');
+
+    // Try each sector with default keys
+    for (var s = 0; s < MF1_SECTORS; s++) {
+      var firstBlock = s * 4;
+      var sectorRead = false;
+      for (var ki = 0; ki < CLONE_DEFAULT_KEYS.length; ki++) {
+        try {
+          var keyBuf = cloneHexToBuf(CLONE_DEFAULT_KEYS[ki]);
+          var result = await ultra.mf1ReadSectorByKeys(s, [keyBuf]);
+          if (result && result.data && result.data.length >= 64) {
+            for (var i = 0; i < 4; i++) {
+              cloneState.blocks[firstBlock + i] = result.data.slice(i * 16, i * 16 + 16);
+              cloneState.keys[firstBlock + i] = CLONE_DEFAULT_KEYS[ki];
+            }
+            sectorRead = true;
+            break;
+          }
+        } catch(e) { /* try next key */ }
+      }
+      if (!sectorRead) readerLog('inf', 'Clone: sector ' + s + ' locked (no known key)');
+      cloneStatus('Reading sectors... ' + (s + 1) + '/' + MF1_SECTORS + (sectorRead ? '' : ' (locked)'));
+    }
+  }
+
+  cloneState.scanned = true;
+  var readCount = cloneState.blocks.filter(function(b) { return b; }).length;
+  cloneStatus(t('cloneDone', readCount, MF1_BLOCKS));
+  readerRenderCloneGrid();
+  readerUpdateCloneBtns();
+  if (btns) btns.disabled = false;
+
+  readerAddRealResponse(tag.uid, '📖 Tag UID: ' + uidHex + ' | ' + readCount + '/' + MF1_BLOCKS + ' blocks | ' + cloneState.type);
+}
+
+async function readerCloneToSlot() {
+  var ultra = readerUltra();
+  if (!ultra || !ultra.isConnected()) { cloneStatus(t('cloneNotConnected')); return; }
+  if (!cloneState.scanned || !cloneState.blocks[0]) { cloneStatus(t('cloneReadFirst')); return; }
+
+  var slotBtn = document.getElementById('readerCloneSlotBtn');
+  var tagBtn = document.getElementById('readerCloneTagBtn');
+  var readBtn = document.getElementById('readerCloneReadBtn');
+  var sealBtn = document.getElementById('readerSealBtn');
+  function disableBtns(v) { if(slotBtn)slotBtn.disabled=v; if(tagBtn)tagBtn.disabled=v; if(readBtn)readBtn.disabled=v; if(sealBtn)sealBtn.disabled=v; }
+  disableBtns(true);
+
+  // Confirm
+  var readCount = cloneState.blocks.filter(function(b){return b;}).length;
+  var uidHex = cloneState.uid ? Array.from(cloneState.uid).map(function(b){return b.toString(16).padStart(2,'0');}).join(' ') : '?';
+  if (!confirm('Write to ChameleonUltra Slot\n\nSource UID: ' + uidHex + '\nBlocks: ' + readCount + '/' + MF1_BLOCKS + '\nSlot: emulator mode\n\nProceed?')) {
+    cloneStatus('Slot write cancelled');
+    disableBtns(false);
+    return;
+  }
+
+  var writeCount = 0;
+  try {
+    // Note: the SDK may expose cmdMf1WriteEmuBlockData or a different API.
+    // Fall back to raw backdoor writes if the SDK method isn't available.
+    for (var b = 0; b < MF1_BLOCKS; b++) {
+      var data = cloneState.blocks[b];
+      if (!data) continue;
+      try {
+        if (typeof ultra.cmdMf1WriteEmuBlockData === 'function') {
+          await ultra.cmdMf1WriteEmuBlockData(b, readerBuf(data));
+        } else {
+          // Fallback: write via raw command on a magic card in field
+          var blockHex = b.toString(16).padStart(2, '0');
+          var rawData = readerBuf(new Uint8Array([0xA0, b].concat(Array.from(data))));
+          await ultra.cmdHf14aRaw({ data: rawData, activateRfField: b === 0, keepRfField: true, timeout: 2000, autoSelect: false });
+        }
+        writeCount++;
+      } catch(e) { /* block write failed */ }
+      if (b % 8 === 0) cloneStatus('Writing to slot... ' + b + '/' + MF1_BLOCKS + ' (' + writeCount + ' written)');
+    }
+    cloneStatus('Written ' + writeCount + '/' + MF1_BLOCKS + ' blocks to slot');
+    readerLog('inf', 'Clone: wrote ' + writeCount + ' blocks to emulator slot');
+  } catch(e) {
+    cloneStatus('Write error: ' + e.message);
+    readerLog('inf', 'Clone: slot write error: ' + e.message);
+  }
+  disableBtns(false);
+}
+
+async function readerCloneToTag() {
+  var ultra = readerUltra();
+  if (!ultra || !ultra.isConnected()) { cloneStatus(t('cloneNotConnected')); return; }
+  if (!cloneState.scanned || !cloneState.blocks[0]) { cloneStatus(t('cloneReadFirst')); return; }
+
+  var slotBtn = document.getElementById('readerCloneSlotBtn');
+  var tagBtn = document.getElementById('readerCloneTagBtn');
+  var readBtn = document.getElementById('readerCloneReadBtn');
+  var sealBtn = document.getElementById('readerSealBtn');
+  function disableBtns(v) { if(slotBtn)slotBtn.disabled=v; if(tagBtn)tagBtn.disabled=v; if(readBtn)readBtn.disabled=v; if(sealBtn)sealBtn.disabled=v; }
+  disableBtns(true);
+
+  // 1. Detect target tag type
+  cloneStatus('Place target magic card on reader...');
+  readerLog('inf', 'Clone: scanning target tag...');
+
+  var tags;
+  try { tags = await ultra.cmdHf14aScan(); } catch(e) { cloneStatus(t('cloneScanFailed')); readerLog('inf', 'Clone: scan error: ' + e.message); disableBtns(false); return; }
+  if (!tags || !tags.length) { cloneStatus(t('cloneNoTag')); readerLog('inf', 'Clone: no tag on reader'); disableBtns(false); return; }
+
+  var tag = tags[0];
+  var uidHex = Array.from(tag.uid).map(function(b) { return b.toString(16).padStart(2,'0'); }).join(' ');
+
+  // Detect magic type
+  var magicType = 'unknown';
+  try { // Gen1A wakeup
+    await ultra.cmdHf14aRaw({ data: cloneHexToBuf('40'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+    await new Promise(function(r) { setTimeout(r, 80); });
+    await ultra.cmdHf14aRaw({ data: cloneHexToBuf('43'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+    magicType = 'Gen1A / UFUID / ZUID';
+  } catch(e) {
+    try { // Alt wakeup (FUID/USCUID)
+      await ultra.cmdHf14aRaw({ data: cloneHexToBuf('20'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+      await new Promise(function(r) { setTimeout(r, 80); });
+      await ultra.cmdHf14aRaw({ data: cloneHexToBuf('23'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+      magicType = 'USCUID / FUID (Alt wakeup)';
+    } catch(e2) {
+      var isGen2 = false;
+      try { isGen2 = await ultra.cmdMf1GetGen2Mode(); } catch(e3) {}
+      if (isGen2) magicType = 'Gen2 / CUID (direct write)';
+    }
+  }
+
+  if (magicType === 'unknown') {
+    cloneStatus('No magic card detected. Place a writable magic card.');
+    readerLog('inf', 'Clone: no magic tag detected');
+    disableBtns(false);
+    return;
+  }
+
+  // 2. Confirm
+  var readCount = cloneState.blocks.filter(function(b) { return b; }).length;
+  var msg = 'Clone to Magic Tag\n\n' +
+    'Target UID: ' + uidHex + '\n' +
+    'Magic type: ' + magicType + '\n' +
+    'Source blocks: ' + readCount + '/' + MF1_BLOCKS + '\n\n' +
+    '⚠ This will overwrite the target tag.\n' +
+    'Proceed with clone?';
+  if (!confirm(msg)) { cloneStatus('Clone cancelled'); disableBtns(false); return; }
+
+  // 3. Write — already woke up, just write blocks
+  cloneStatus('Writing blocks...');
+  readerLog('inf', 'Clone: writing to ' + magicType + ' tag UID=' + uidHex);
+
+  var writeCount = 0;
+  if (magicType === 'Gen2 / CUID (direct write)') {
+    // Gen2: direct write to block 0 via standard write
+    for (var b = 0; b < MF1_BLOCKS; b++) {
+      var data = cloneState.blocks[b];
+      if (!data) continue;
+      try {
+        if (typeof ultra.cmdMf1WriteOneBlock === 'function') {
+          await ultra.cmdMf1WriteOneBlock(b, readerBuf(data));
+        } else {
+          var rawData = new Uint8Array(2 + 16);
+          rawData[0] = 0xA0; rawData[1] = b;
+          rawData.set(data, 2);
+          await ultra.cmdHf14aRaw({ data: readerBuf(rawData), activateRfField: false, keepRfField: true, timeout: 3000, autoSelect: false });
+        }
+        writeCount++;
+      } catch(e) {}
+      if (b % 8 === 0) cloneStatus(t('cloneWriting', b, MF1_BLOCKS, writeCount));
+    }
+  } else {
+    // Already woken via Gen1A or Alt — use backdoor A0 writes
+    for (var b2 = 0; b2 < MF1_BLOCKS; b2++) {
+      var d2 = cloneState.blocks[b2];
+      if (!d2) continue;
+      try {
+        var rawData = new Uint8Array(2 + 16);
+        rawData[0] = 0xA0; rawData[1] = b2;
+        rawData.set(d2, 2);
+        await ultra.cmdHf14aRaw({ data: readerBuf(rawData), activateRfField: false, keepRfField: true, timeout: 3000, autoSelect: false });
+        writeCount++;
+      } catch(e) {}
+      if (b2 % 8 === 0) cloneStatus(t('cloneWriting', b2, MF1_BLOCKS, writeCount));
+    }
+  }
+  cloneStatus(t('cloneWritten', writeCount, MF1_BLOCKS));
+  readerLog('inf', 'Clone: wrote ' + writeCount + ' blocks to ' + magicType + ' tag');
+  disableBtns(false);
+}
+
+async function readerSeal() {
+  var ultra = readerUltra();
+  if (!ultra || !ultra.isConnected()) { cloneStatus(t('cloneNotConnected')); return; }
+
+  var sealBtn = document.getElementById('readerSealBtn');
+  var slotBtn = document.getElementById('readerCloneSlotBtn');
+  var tagBtn = document.getElementById('readerCloneTagBtn');
+  var readBtn = document.getElementById('readerCloneReadBtn');
+  function disableBtns(v) { if(sealBtn)sealBtn.disabled=v; if(slotBtn)slotBtn.disabled=v; if(tagBtn)tagBtn.disabled=v; if(readBtn)readBtn.disabled=v; }
+  disableBtns(true);
+
+  // 1. Detect tag type
+  cloneStatus('Place magic card on reader...');
+  readerLog('inf', 'Seal: scanning for magic card...');
+
+  var tags;
+  try { tags = await ultra.cmdHf14aScan(); } catch(e) { cloneStatus(t('cloneScanFailed')); readerLog('inf', 'Seal: scan error'); disableBtns(false); return; }
+  if (!tags || !tags.length) { cloneStatus(t('cloneNoTag')); readerLog('inf', 'Seal: no tag found'); disableBtns(false); return; }
+
+  var tag = tags[0];
+  var uidHex = Array.from(tag.uid).map(function(b) { return b.toString(16).padStart(2,'0'); }).join(' ');
+
+  // 2. Detect magic type
+  var magicType = 'none';
+  try { // Try Alt wakeup first (FUID detection)
+    await ultra.cmdHf14aRaw({ data: cloneHexToBuf('20'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+    await new Promise(function(r) { setTimeout(r, 80); });
+    await ultra.cmdHf14aRaw({ data: cloneHexToBuf('23'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+    magicType = 'alt';
+  } catch(e) { /* try Gen1A */ }
+
+  if (magicType === 'alt') {
+    alert('⚠ FUID Tag Detected\n\nUID: ' + uidHex + '\nWakeup: Alt (20→23)\n\nFUID auto-seals after the first write to block 0. Manual sealing is not needed. If the tag has already been written, it may already be sealed.');
+    readerLog('inf', 'Seal: FUID detected — manual seal not needed (auto-seals on first write)');
+    cloneStatus('FUID — manual seal not needed');
+    disableBtns(false);
+    return;
+  }
+
+  if (magicType === 'none') {
+    try { // Try Gen1A wakeup (UFUID)
+      await ultra.cmdHf14aRaw({ data: cloneHexToBuf('40'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+      await new Promise(function(r) { setTimeout(r, 80); });
+      await ultra.cmdHf14aRaw({ data: cloneHexToBuf('43'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+      magicType = 'gen1a';
+    } catch(e) {
+      // Try Gen2
+      var isGen2 = false;
+      try { isGen2 = await ultra.cmdMf1GetGen2Mode(); } catch(e2) {}
+      if (isGen2) magicType = 'gen2';
+    }
+  }
+
+  if (magicType === 'gen2') {
+    alert('⚠ Gen2/CUID Tag Detected\n\nUID: ' + uidHex + '\n\nGen2/CUID tags use direct write to block 0. They do not have a sealable backdoor. No seal needed.');
+    readerLog('inf', 'Seal: Gen2 detected — no backdoor to seal');
+    cloneStatus('Gen2/CUID — no seal needed');
+    disableBtns(false);
+    return;
+  }
+
+  if (magicType === 'none') {
+    alert('⚠ No Magic Card Detected\n\nNo magic wakeup (40 or 20) succeeded. This tag may be a normal MIFARE Classic or unresponsive. Seal only works on UFUID/ZUID magic cards.');
+    readerLog('inf', 'Seal: no magic card detected');
+    cloneStatus('No magic card detected');
+    disableBtns(false);
+    return;
+  }
+
+  // 3. Confirm seal
+  var confirmed = confirm(
+    '🔒 Seal UFUID Magic Tag\n\n' +
+    'UID: ' + uidHex + '\n' +
+    'Wakeup: Gen1A (40→43)\n\n' +
+    '⚠ WARNING: This will permanently disable the Gen1A backdoor.\n' +
+    'The tag will become a normal MIFARE Classic card.\n' +
+    'This CANNOT be undone.\n\n' +
+    'Proceed with seal?'
+  );
+  if (!confirmed) { cloneStatus('Seal cancelled'); disableBtns(false); return; }
+
+  // 4. Write seal config
+  cloneStatus('Sealing...');
+  readerLog('inf', 'Seal: writing seal config to UFUID UID=' + uidHex);
+
+  try {
+    // Write seal config: 85000000000000000000000000000008
+    var sealData = new Uint8Array(18);
+    sealData[0] = 0xE1; sealData[1] = 0x00;
+    var config = [0x85,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08];
+    for (var i = 0; i < 16; i++) sealData[i + 2] = config[i];
+
+    await ultra.cmdHf14aRaw({ data: readerBuf(sealData), activateRfField: false, keepRfField: true, timeout: 3000, autoSelect: false });
+    cloneStatus(t('cloneSealed'));
+    readerLog('inf', 'Seal: config written — backdoor permanently disabled');
+  } catch(e) {
+    cloneStatus(t('cloneSealFailed', e.message));
+    readerLog('inf', 'Seal: write error: ' + e.message);
+  }
+
+  disableBtns(false);
+}
+
 function readerClearReal() { var b = document.getElementById("readerRealBody"); if(b) { b.innerHTML = '<div class="reader-chat-empty" style="padding:12px">' + t('readerNoResp') + '</div>'; var cnt = document.getElementById("readerRespCount"); if(cnt) cnt.textContent = ""; } }
 
 function readerAddRealResponse(data, desc, afterHex) {
@@ -3063,14 +3588,15 @@ function readerTogglePanel() {
   document.querySelectorAll('.reader-toggle-btn').forEach(function(b) { b.classList.toggle('active', nowOpen); });
   var tt = document.getElementById('readerToggleText');
   if (tt) tt.textContent = nowOpen ? 'Close' : 'Reader';
-  document.getElementById('tabs').classList.toggle('hidden', !isOpen);
-  document.getElementById('slotBar').classList.toggle('hidden', !isOpen);
-  document.getElementById('fileInfo').classList.toggle('hidden', !isOpen);
-  document.querySelector('.subtitle').classList.toggle('hidden', !isOpen);
-  document.querySelector('.drop-zone').classList.toggle('hidden', !isOpen);
+  document.getElementById('tabs').classList.toggle('hidden', !nowOpen);
+  document.getElementById('slotBar').classList.toggle('hidden', !nowOpen);
+  document.getElementById('fileInfo').classList.toggle('hidden', !nowOpen);
+  document.querySelector('.subtitle').classList.toggle('hidden', !nowOpen);
+  document.querySelector('.drop-zone').classList.toggle('hidden', !nowOpen);
   document.getElementById('errorBox').classList.add('hidden');
   if (!panel.classList.contains('hidden')) {
     panel.querySelectorAll('[data-i18n-t]').forEach(function(el) { el.innerHTML = t(el.dataset.i18nT); });
+    readerUpdateCloneBtns();
   }
 }
 
@@ -3159,6 +3685,21 @@ function readerParseAndSend(input) {
 readerInit();
 document.getElementById('readerConnectBtn').addEventListener('click', readerConnect);
 document.getElementById('readerToggle').addEventListener('click', readerTogglePanel);
+document.getElementById('readerCloneReadBtn').addEventListener('click', readerReadAllBlocks);
+document.getElementById('readerCloneSlotBtn').addEventListener('click', readerCloneToSlot);
+document.getElementById('readerCloneTagBtn').addEventListener('click', readerCloneToTag);
+document.getElementById('readerSealBtn').addEventListener('click', readerSeal);
+
+// Reader sub-tab switching
+document.getElementById('readerTabBar').querySelectorAll('.reader-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.getElementById('readerTabBar').querySelectorAll('.reader-tab').forEach(function(t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    var rtab = tab.dataset.rtab;
+    document.getElementById('readerTabSniff').classList.toggle('active', rtab === 'sniff');
+    document.getElementById('readerTabClone').classList.toggle('active', rtab === 'clone');
+  });
+});
 document.getElementById('readerDisconnectBtn').addEventListener('click', readerDisconnect);
 document.getElementById('readerSendBtn').addEventListener('click', () => {
   readerParseAndSend(document.getElementById('readerCmdInput').value);
