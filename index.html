@@ -442,6 +442,15 @@
   .frame-sblock { color: var(--orange); }
   .frame-deselect { color: var(--red); }
   .frame-wtx { color: var(--orange); }
+  /* Magic card commands — purple/magenta */
+  .frame-magic_wakeup_gen1a, .frame-magic_wakeup_alt, .frame-magic_access,
+  .frame-magic_read_block, .frame-magic_write_block,
+  .frame-magic_hidden_read, .frame-magic_hidden_write,
+  .frame-magic_config_read, .frame-magic_config_write,
+  .frame-magic_auth, .frame-magic_danger,
+  .frame-gen3_setuid, .frame-gen3_write_uid, .frame-gen3_freeze { color: #c084fc; }
+  /* MIFARE Classic commands — teal */
+  .frame-mifare_read, .frame-mifare_write { color: #2dd4bf; }
 
   /* Empty state */
   .empty-state {
@@ -1234,6 +1243,7 @@ const translations = {
     phaseData: 'Data Exchange (T=CL)',
     phaseEnd: 'Session End',
     phaseEncrypted: 'Encrypted Data (Post-Auth)',
+    phaseMagic: 'Magic Card',
     // Reader panel
     readerConnect: 'Connect',
     readerDisconnect: 'Disconnect',
@@ -1259,6 +1269,35 @@ const translations = {
     readerBle: 'BLE',
     readerLoadHf: 'Load an HF sniff file',
     readerLogEmpty: 'Connect &amp; click a sniff command to relay.',
+    // Magic card commands
+    descMAGICWAKEUPGEN1ATitle: 'MAGIC WAKEUP Gen1A',
+    descMAGICWAKEUPGEN1ADetail: 'Gen1A / Gen2 magic wakeup command 0x40 (7-bit short frame). Enables backdoor read/write on UID/ZERO/CUID/UFUID/ZUID tags. Typical sequence: 40 → 43 → 30/A0.',
+    descMAGICWAKEUPALTTitle: 'MAGIC WAKEUP Alt (USCUID)',
+    descMAGICWAKEUPALTDetail: 'Alternate magic wakeup command 0x20 (7-bit short frame) for USCUID/GDM/FUID cards with config byte 0x85 at offset 2. Sequence: 20 → 23 → 30/A0 or 38/A8 for hidden blocks.',
+    descMAGICACCESSTitle: 'MAGIC ACCESS',
+    descMAGICACCESSDetail: 'Magic access byte {0} sent after wakeup. Followed by a backdoor command (30=read, A0=write, 38=hidden read, A8=hidden write, E0=config read, E1=config write).',
+    descMIFAREREADTitle: 'MIFARE Classic / Magic READ',
+    descMIFAREREADDetail: 'Reads block {0} from MIFARE Classic or via magic backdoor. Standard MIFARE: 0x30 + block number + CRC. Magic cards with block0 or any block readable after wakeup.',
+    descMIFAREWRITETitle: 'MIFARE Classic / Magic WRITE',
+    descMIFAREWRITEDetail: 'Writes to block {0} via MIFARE Classic or magic backdoor. Standard MIFARE: 0xA0 + block number + 16 data bytes + CRC. Magic cards: direct write after wakeup (Gen1A: 40→43→A0, USCUID: 20→23→A0).',
+    descMAGICHIDDENREADTitle: 'USCUID HIDDEN READ',
+    descMAGICHIDDENREADDetail: 'Reads from USCUID hidden memory space. Command 0x38 + block — different from normal MIFARE memory. Used after USCUID auth (0x80) or wakeup to access perso/config areas not visible to 0x30.',
+    descMAGICHIDDENWRITETitle: 'USCUID HIDDEN WRITE',
+    descMAGICHIDDENWRITEDetail: 'Writes to USCUID hidden memory space. Command 0xA8 + block + 16 data bytes. Used to program perso data blocks (F0/F1/F3) or hidden configuration.',
+    descMAGICCONFIGREADTitle: 'USCUID CONFIG READ',
+    descMAGICCONFIGREADDetail: 'Reads the 16-byte USCUID configuration page (command 0xE0). Config starts with 0x85 magic byte. Controls: UID mode, SAK, shadow mode, magic auth enable, static nonce, signature sector.',
+    descMAGICCONFIGWRITETitle: 'USCUID CONFIG WRITE',
+    descMAGICCONFIGWRITEDetail: 'Writes the 16-byte USCUID configuration page (command 0xE1 + 16 data bytes). Writing config byte0=0x85 disables Gen1a mode — irreversible once UID is changed.',
+    descMAGICAUTHTitle: 'USCUID MAGIC AUTH',
+    descMAGICAUTHDetail: 'USCUID magic authentication (0x80 after SELECT). Card responds with Crypto1 auth using key 000000000000. Enables backdoor read/write commands (38/A8/E0/E1). GDMIC signature sector auth.',
+    descMAGICDANGERTitle: 'USCUID DANGER COMMAND',
+    descMAGICDANGERDetail: 'USCUID bulk-write command {0}. F0 = write all main+config to 00, F1 = write to FF, F6 = write 55, F8-FE = write backdoor area. No 0A response — permanently bricks if config gets corrupted.',
+    descGEN3SETUIDTitle: 'Gen3 APDU SETUID',
+    descGEN3SETUIDDetail: 'Gen3 (APDU) change UID command: 90 FB CC CC 07 + UID bytes. Also writes block0 on some cards. Select card first, then send this command with the new UID. Irreversible if frozen.',
+    descGEN3WRITEUIDTitle: 'Gen3 APDU WRITE BLOCK0',
+    descGEN3WRITEUIDDetail: 'Gen3 (APDU) write block0: 90 F0 CC CC 10 + 16 block0 bytes. Writes full block0 including SAK/ATQA/mfr data. Auto-corrects BCC for 4-byte UID. Side effect: also changes UID.',
+    descGEN3FREEZETitle: 'Gen3 APDU FREEZE',
+    descGEN3FREEZEDetail: 'Gen3 (APDU) permanent freeze: 90 FD 11 11 00. After this, no further writes are possible. Cannot be reversed. Only send when you are certain the configuration is final.',
   },
   vi: {
     siteTitle: 'Sniff Viewer <small>cho tệp .bin ChameleonUltra</small>',
@@ -1410,6 +1449,7 @@ const translations = {
     phaseData: 'Trao Đổi Dữ Liệu (T=CL)',
     phaseEnd: 'Kết Thúc Phiên',
     phaseEncrypted: 'Dữ Liệu Mã Hóa (Sau Xác Thực)',
+    phaseMagic: 'Lệnh Thẻ Ma',
     // Reader panel
     readerConnect: 'Kết nối',
     readerDisconnect: 'Ngắt kết nối',
@@ -1435,6 +1475,35 @@ const translations = {
     readerBle: 'BLE',
     readerLoadHf: 'Mở tệp sniff HF',
     readerLogEmpty: 'Kết nối &amp; nhấp vào lệnh sniff để chuyển tiếp.',
+    // Magic card commands
+    descMAGICWAKEUPGEN1ATitle: 'MAGIC WAKEUP Gen1A',
+    descMAGICWAKEUPGEN1ADetail: 'Lênh danh thuc the ma Gen1A/Gen2 0x40 (khung ngan 7-bit). Mo cua sau doc/ghi tren the UID/ZERO/CUID/UFUID/ZUID. Trinh tu: 40 43 30/A0.',
+    descMAGICWAKEUPALTTitle: 'MAGIC WAKEUP Alt (USCUID)',
+    descMAGICWAKEUPALTDetail: 'Lenh danh thuc thay the 0x20 (7-bit) cho the USCUID/GDM/FUID voi byte cau hinh 0x85 tai offset 2. Trinh tu: 20 23 30/A0 hoac 38/A8 cho khoi an.',
+    descMAGICACCESSTitle: 'MAGIC ACCESS',
+    descMAGICACCESSDetail: 'Byte truy cap ma {0} gui sau danh thuc. Tiep theo la lenh cua sau (30=doc, A0=ghi, 38=doc an, A8=ghi an, E0=doc cau hinh, E1=ghi cau hinh).',
+    descMIFAREREADTitle: 'MIFARE Classic / Magic READ',
+    descMIFAREREADDetail: 'Doc block {0} tu the MIFARE Classic hoac qua cua sau ma. MIFARE chuan: 0x30 + so block + CRC. The ma: doc block0 hoac block bat ky sau danh thuc.',
+    descMIFAREWRITETitle: 'MIFARE Classic / Magic WRITE',
+    descMIFAREWRITEDetail: 'Ghi block {0} qua MIFARE Classic hoac cua sau ma. MIFARE chuan: 0xA0 + so block + 16 byte du lieu + CRC. The ma: ghi truc tiep sau danh thuc.',
+    descMAGICHIDDENREADTitle: 'USCUID HIDDEN READ',
+    descMAGICHIDDENREADDetail: 'Doc vung nho an USCUID. Lenh 0x38 + block khac voi bo nho MIFARE thuong. Dung sau xac thuc ma (0x80) hoac danh thuc de truy cap vung perso/cau hinh.',
+    descMAGICHIDDENWRITETitle: 'USCUID HIDDEN WRITE',
+    descMAGICHIDDENWRITEDetail: 'Ghi vung nho an USCUID. Lenh 0xA8 + block + 16 byte du lieu. Dung de lap trinh khoi perso (F0/F1/F3) hoac cau hinh an.',
+    descMAGICCONFIGREADTitle: 'USCUID CONFIG READ',
+    descMAGICCONFIGREADDetail: 'Doc trang cau hinh 16-byte USCUID (lenh 0xE0). Cau hinh bat dau bang byte ma 0x85. Dieu khien: che do UID, SAK, shadow mode, magic auth, static nonce, signature sector.',
+    descMAGICCONFIGWRITETitle: 'USCUID CONFIG WRITE',
+    descMAGICCONFIGWRITEDetail: 'Ghi trang cau hinh 16-byte USCUID (lenh 0xE1 + 16 byte). Ghi byte0=0x85 vo hieu hoa Gen1a khong the dao nguoc sau khi doi UID.',
+    descMAGICAUTHTitle: 'USCUID MAGIC AUTH',
+    descMAGICAUTHDetail: 'Xac thuc ma USCUID (0x80 sau SELECT). The phan hoi voi Crypto1 auth dung khoa 000000000000. Mo lenh cua sau (38/A8/E0/E1). Xac thuc vung ky so GDMIC.',
+    descMAGICDANGERTitle: 'USCUID DANGER COMMAND',
+    descMAGICDANGERDetail: 'Lenh ghi hang loat USCUID {0}. F0 = ghi main+config thanh 00, F1 = thanh FF, F6 = thanh 55, F8-FE = ghi vung backdoor. Khong co phan hoi 0A hong vinh vien neu cau hinh sai.',
+    descGEN3SETUIDTitle: 'Gen3 APDU SETUID',
+    descGEN3SETUIDDetail: 'Lenh doi UID Gen3 (APDU): 90 FB CC CC 07 + UID byte. Cung ghi block0 tren mot so the. Chon the truoc, sau do gui lenh nay voi UID moi. Khong the dao nguoc neu da dong bang.',
+    descGEN3WRITEUIDTitle: 'Gen3 APDU WRITE BLOCK0',
+    descGEN3WRITEUIDDetail: 'Lenh ghi block0 Gen3 (APDU): 90 F0 CC CC 10 + 16 byte block0. Ghi toan bo block0 gom SAK/ATQA/du lieu nha san xuat. Tu dong sua BCC cho UID 4 byte.',
+    descGEN3FREEZETitle: 'Gen3 APDU FREEZE',
+    descGEN3FREEZEDetail: 'Lenh dong bang vinh vien Gen3 (APDU): 90 FD 11 11 00. Sau lenh nay, khong the ghi them. Khong the hoan tac. Chi gui khi chac chan cau hinh da hoan tat.',
   }
 };
 
@@ -1513,25 +1582,31 @@ function oddParity(value) {
 }
 
 // ============================================================
-//  Frame type detection (HF 14A) — ISO 14443-3 / MIFARE Classic
+//  Frame type detection (HF 14A) — ISO 14443-3 / MIFARE Classic / Magic
 // ============================================================
 function detectFrameType(data, isTx, prevFrame) {
   if (data.length === 0) return 'unknown';
   const d0 = data[0];
 
+  // ── 1-byte frames ──
   if (data.length === 1) {
     if (!isTx && d0 === 0x26) return 'REQA';
     if (!isTx && d0 === 0x52) return 'WUPA';
-    if (isTx && (d0 & 0x80) === 0x00) {
+    if (!isTx && (d0 === 0x40 || d0 === 0x20))
+      return d0 === 0x40 ? 'MAGIC_WAKEUP_GEN1A' : 'MAGIC_WAKEUP_ALT';
+    if (isTx) {
+      // SAK: bit7 must be 0 (mirrored by card) — catches 0x00–0x7F
+      if ((d0 & 0x80) === 0x00) return `SAK_0x${d0.toString(16).padStart(2,'0')}`;
+      // SAK with bit7=1 (0x80–0xFF): not mirrored, but still a SAK
       return `SAK_0x${d0.toString(16).padStart(2,'0')}`;
     }
     return `CMD_0x${d0.toString(16).padStart(2,'0')}`;
   }
 
-  if (data.length === 2 && isTx) {
-    return 'ATQA';
-  }
+  // ── 2-byte tag → reader = ATQA ──
+  if (data.length === 2 && isTx) return 'ATQA';
 
+  // ── Anti-collision / Select (reader → tag) ──
   const selByte = d0;
   if (!isTx) {
     if (selByte === 0x93 || selByte === 0x92) {
@@ -1558,39 +1633,69 @@ function detectFrameType(data, isTx, prevFrame) {
         return 'ANTICOLL_CL3';
       }
     }
+
+    // ── Magic access byte (43 after 40 wakeup, 23 after 20 wakeup) ──
+    if (prevFrame && (prevFrame.frameType === 'MAGIC_WAKEUP_GEN1A' || prevFrame.frameType === 'MAGIC_WAKEUP_ALT')) {
+      if (d0 === 0x43 || d0 === 0x23) return 'MAGIC_ACCESS';
+    }
+
+    // ── MIFARE Classic / Magic backdoor commands (reader → tag) ──
+    if (d0 === 0x30) return 'MIFARE_READ';
+    if (d0 === 0xA0) return 'MIFARE_WRITE';
+    if (d0 === 0x38) return 'MAGIC_HIDDEN_READ';
+    if (d0 === 0xA8) return 'MAGIC_HIDDEN_WRITE';
+    if (d0 === 0xE0) return 'MAGIC_CONFIG_READ';
+    if (d0 === 0xE1) return 'MAGIC_CONFIG_WRITE';
+    if (d0 === 0x80) return 'MAGIC_AUTH';
+
+    // Magic bulk danger commands — USCUID reset/set-all
+    if ([0xF0, 0xF1, 0xF6].includes(d0)) return 'MAGIC_DANGER';
+    if ([0xF8, 0xF9, 0xFE].includes(d0)) return 'MAGIC_DANGER';
+
+    // Gen3 APDU commands
+    if (d0 === 0x90 && data.length >= 2) {
+      const apdu = data[1];
+      if (apdu === 0xFB) return 'GEN3_SETUID';
+      if (apdu === 0xF0) return 'GEN3_WRITE_UID';
+      if (apdu === 0xFD) return 'GEN3_FREEZE';
+    }
   }
 
+  // ── UID responses (tag → reader) ──
   if (isTx && data.length >= 4) {
-    if (data.length === 5) {
-      const bcc = data[0] ^ data[1] ^ data[2] ^ data[3];
-      if (bcc === data[4]) return 'UID_CL1';
-    }
+    if (data.length === 5 && (data[4] === (data[0] ^ data[1] ^ data[2] ^ data[3])))
+      return 'UID_CL1';
     if (data.length === 4 && data[0] === 0x88) {
       const bcc = data[0] ^ data[1] ^ data[2];
       if (bcc === data[3]) return 'UID_CL2';
     }
-    if (data.length === 5) {
-      if (data[0] !== 0x00 && data[0] < 0x88) return 'UID';
-    }
+    // Non-CT 5-byte UID (raw UID, not CL1 with BCC)
+    if (data.length === 5 && data[0] !== 0x00 && data[0] < 0x88) return 'UID';
   }
 
-  if (!isTx && data.length === 4 && d0 === 0x50 && data[1] === 0x00) return 'HALT';
-  if (!isTx && data.length === 3 && d0 === 0xE0) return 'RATS';
+  // ── Standard reader command frames ──
+  if (!isTx && data.length >= 2 && d0 === 0x50 && data[1] === 0x00) return 'HALT';
+  if (!isTx && d0 === 0xE0 && (data.length === 3 || data.length === 4)) return 'RATS';
   if (!isTx && (d0 & 0xF0) === 0xD0) return 'PPS';
 
+  // ── ATS (tag → reader) ──
   if (isTx && data.length >= 2 && d0 <= 0x1F && d0 > 0x00) {
-    if (d0 === data.length) return 'ATS';
-    if (d0 + 1 >= data.length) return 'ATS';
+    if (d0 === data.length || d0 + 1 >= data.length) return 'ATS';
   }
 
+  // ── MIFARE Classic Auth commands (reader → tag) ──
   if (!isTx && (d0 === 0x60 || d0 === 0x61) && data.length === 4) return 'AUTH';
   if (!isTx && data.length === 8 && prevFrame && prevFrame.frameType === 'AUTH') return 'AUTH_CHALLENGE';
 
+  // ── ISO 14443-4 T=CL protocol blocks ──
+  // Length heuristics: genuine T=CL frames are short (PCB + CID/NAD + data ≤ 18B).
+  // MIFARE block data (16B) with d0 in 0x00–0x3F would falsely match I-BLOCK.
+  // Limit I-BLOCK detection to ≤ 12B to avoid confusion with MIFARE block data.
   if (data.length >= 1) {
     const pcb = d0;
-    if ((pcb & 0xC0) === 0x00) return 'I-BLOCK';
-    if ((pcb & 0xC6) === 0x82) return 'R-BLOCK';
-    if ((pcb & 0xC0) === 0xC0) {
+    if ((pcb & 0xC0) === 0x00 && data.length <= 12) return 'I-BLOCK';
+    if ((pcb & 0xC6) === 0x82 && data.length <= 6) return 'R-BLOCK';
+    if ((pcb & 0xC0) === 0xC0 && data.length <= 6) {
       if ((pcb & 0xF7) === 0xC2) return 'DESELECT';
       if ((pcb & 0xFC) === 0xF0 || (pcb & 0xFC) === 0xF2) return 'WTX';
       return 'S-BLOCK';
@@ -1648,6 +1753,49 @@ function describeFrame(f) {
     case 'SELECT_CL2': case 'SELECT_CL3':
     case 'UID_CL2': case 'AUTH_CHALLENGE': case 'AUTH_RESPONSE':
       detail = t('desc' + ft.replace(/[^a-zA-Z0-9]/g, '') + 'Detail');
+      break;
+    // Magic card descriptions
+    case 'MAGIC_WAKEUP_GEN1A':
+      detail = t('descMAGICWAKEUPGEN1ADetail');
+      break;
+    case 'MAGIC_WAKEUP_ALT':
+      detail = t('descMAGICWAKEUPALTDetail');
+      break;
+    case 'MAGIC_ACCESS':
+      detail = t('descMAGICACCESSDetail', '0x' + d[0].toString(16));
+      break;
+    case 'MIFARE_READ':
+      detail = t('descMIFAREREADDetail', '0x' + (d[1] || 0).toString(16));
+      break;
+    case 'MIFARE_WRITE':
+      detail = t('descMIFAREWRITEDetail', '0x' + (d[1] || 0).toString(16));
+      break;
+    case 'MAGIC_HIDDEN_READ':
+      detail = t('descMAGICHIDDENREADDetail');
+      break;
+    case 'MAGIC_HIDDEN_WRITE':
+      detail = t('descMAGICHIDDENWRITEDetail');
+      break;
+    case 'MAGIC_CONFIG_READ':
+      detail = t('descMAGICCONFIGREADDetail');
+      break;
+    case 'MAGIC_CONFIG_WRITE':
+      detail = t('descMAGICCONFIGWRITEDetail');
+      break;
+    case 'MAGIC_AUTH':
+      detail = t('descMAGICAUTHDetail');
+      break;
+    case 'MAGIC_DANGER':
+      detail = t('descMAGICDANGERDetail', '0x' + d[0].toString(16));
+      break;
+    case 'GEN3_SETUID':
+      detail = t('descGEN3SETUIDDetail');
+      break;
+    case 'GEN3_WRITE_UID':
+      detail = t('descGEN3WRITEUIDDetail');
+      break;
+    case 'GEN3_FREEZE':
+      detail = t('descGEN3FREEZEDetail');
       break;
     case 'unknown':
       title = t('descUnknownTitle');
@@ -1868,6 +2016,8 @@ function phaseForFrameType(ft) {
     return t('phaseEnd');
   if (ft === 'DATA')
     return t('phaseEncrypted');
+  if (ft.startsWith('MAGIC_') || ft.startsWith('GEN3_') || ft === 'MIFARE_READ' || ft === 'MIFARE_WRITE')
+    return t('phaseMagic');
   return '';
 }
 
