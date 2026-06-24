@@ -3018,12 +3018,136 @@ function readerUpdateSniffList() {
         if (sakName !== sakKey) info += ' <span style="color:var(--accent)">(' + sakName + ')</span>';
       }
       if (tag.atqa) info += ' ATQA:' + Array.from(tag.atqa).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-      // Detect card features
-      try { var mf = await ultra.cmdMf1IsSupport(); info += ' <span style="color:var(--green)">MIFARE:' + (mf ? 'yes' : 'no') + '</span>'; } catch(e) {}
-      try { var g1 = await ultra.cmdMf1GetGen1aMode(); info += ' <span style="color:' + (g1 ? 'var(--orange)' : 'var(--text-faint)') + '">gen1a:' + g1 + '</span>'; } catch(e) {}
-      try { var g2 = await ultra.cmdMf1GetGen2Mode(); info += ' <span style="color:' + (g2 ? 'var(--orange)' : 'var(--text-faint)') + '">gen2:' + g2 + '</span>'; } catch(e) {}
-      try { var nm = await ultra.cmdMf0NtagGetUidMagicMode(); info += ' <span style="color:' + (nm ? 'var(--orange)' : 'var(--text-faint)') + '">NTAG_magic:' + nm + '</span>'; } catch(e) { info += ' NTAG:no'; }
-      // Read block 0
+
+      // ===== Phase 2: Basic magic mode checks =====
+      var isGen1a = false, isGen2 = false, isNtagMagic = false, isMf = false;
+      try { isMf = await ultra.cmdMf1IsSupport(); } catch(e) {}
+      try { isGen1a = await ultra.cmdMf1GetGen1aMode(); } catch(e) {}
+      try { isGen2 = await ultra.cmdMf1GetGen2Mode(); } catch(e) {}
+      try { isNtagMagic = await ultra.cmdMf0NtagGetUidMagicMode(); } catch(e) {}
+
+      var badges = [];
+      if (isMf) badges.push('MIFARE:yes'); else badges.push('MIFARE:no');
+      if (isGen1a) badges.push('<span style="color:var(--orange)">🔓 Gen1A</span>');
+      if (isGen2) badges.push('<span style="color:var(--orange)">🔓 Gen2</span>');
+      if (isNtagMagic) badges.push('<span style="color:var(--orange)">NTAG_magic</span>');
+      info += ' ' + badges.join(' ');
+
+      // ===== Phase 3: Active backdoor probes =====
+      var wakeupType = '';      // gen1a | alt | gdm
+      var configBytes = null;   // 16-byte config if readable
+      var isUFUID = false, isFUID = false, isZUID = false, isGDM = false, isSealed = false;
+      var hasSigSector = false, hasStaticNonce = false, hasShadowMode = false;
+      var configSAK = null;
+
+      // Probe Gen1A wakeup (40→43→E000 read config)
+      if (isGen1a) {
+        try {
+          await ultra.cmdHf14aRaw({ data: cloneHexToBuf('40'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+          await new Promise(function(r) { setTimeout(r, 60); });
+          await ultra.cmdHf14aRaw({ data: cloneHexToBuf('43'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+          // Try read config
+          try {
+            var cfgResp = await ultra.cmdHf14aRaw({ data: cloneHexToBuf('E000'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+            if (cfgResp && cfgResp.length >= 16) {
+              configBytes = new Uint8Array(cfgResp.slice(0, 16));
+              wakeupType = 'gen1a';
+            }
+          } catch(e) { /* config not readable */ }
+        } catch(e) { /* wakeup failed */ }
+      }
+
+      // Probe Alt wakeup (20→23→E000) if Gen1A didn't work
+      if (!wakeupType) {
+        try {
+          await ultra.cmdHf14aRaw({ data: cloneHexToBuf('20'), dataBitLength: 7, activateRfField: true, keepRfField: true, timeout: 2000, autoSelect: false });
+          await new Promise(function(r) { setTimeout(r, 60); });
+          await ultra.cmdHf14aRaw({ data: cloneHexToBuf('23'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+          try {
+            var cfgResp2 = await ultra.cmdHf14aRaw({ data: cloneHexToBuf('E000'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+            if (cfgResp2 && cfgResp2.length >= 16) {
+              configBytes = new Uint8Array(cfgResp2.slice(0, 16));
+              wakeupType = 'alt';
+            }
+          } catch(e) { /* config not readable via alt */ }
+        } catch(e) { /* alt wakeup failed */ }
+      }
+
+      // Probe Magic Auth (80 after SELECT) for GDM
+      if (!wakeupType && isMf) {
+        try {
+          await ultra.cmdHf14aRaw({ data: cloneHexToBuf('80'), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+          // If we get here without error, magic auth works
+          wakeupType = 'gdm';
+        } catch(e) { /* magic auth failed */ }
+      }
+
+      // ===== Phase 4: Parse config bytes =====
+      if (configBytes && configBytes.length >= 16) {
+        var c0 = configBytes[0], c1 = configBytes[1];
+        var cw = (c0 << 8) | c1;
+        // 0x8500 = GDM/USCUID mode (Gen1A disabled by bitflip)
+        // 0x7AFF = FUID/UFUID/ZUID variant
+        if (cw === 0x8500) {
+          isGDM = true;
+          var wakeupCmd = configBytes[2];
+          var cuidMode = configBytes[7] === 0x5A;
+          var ev1Mode = configBytes[9];
+          hasShadowMode = configBytes[10] === 0x5A;
+          var magicAuth = configBytes[11] === 0x5A;
+          hasStaticNonce = configBytes[12] === 0x5A;
+          hasSigSector = configBytes[13] === 0x5A;
+          configSAK = configBytes[15];
+
+          info += ' <span style="color:#c084fc">[GDM/USCUID]</span>';
+          if (cuidMode) info += ' <span style="color:var(--green)">+CUID</span>';
+          if (magicAuth) info += ' <span style="color:var(--accent)">+MagicAuth</span>';
+          if (hasShadowMode) info += ' <span style="color:var(--orange)">+Shadow</span>';
+          if (hasStaticNonce) info += ' <span style="color:var(--red)">+StaticNonce</span>';
+          if (hasSigSector) info += ' <span style="color:var(--blue)">+SigSector</span>';
+          if (configSAK && configSAK !== 0x08) info += ' SAK_conf:0x' + configSAK.toString(16).padStart(2, '0');
+          if (wakeupCmd === 0x85) info += ' AltWake:20→23';
+          else info += ' AltWake:40→43';
+        } else if (cw === 0x7AFF) {
+          // FUID/UFUID/ZUID family
+          var configByte2 = configBytes[2];
+          var configByte7 = configBytes[7]; // CUID mode
+          var configByte11 = configBytes[11]; // magic auth
+          var configByte15 = configBytes[15]; // SAK
+
+          if (wakeupType === 'alt') {
+            if (configByte7 === 0x5A) { isFUID = true; info += ' <span style="color:#c084fc">[FUID]</span>'; }
+            else { info += ' <span style="color:#c084fc">[USCUID/Alt]</span>'; }
+          } else {
+            if (configByte2 === 0x00 && configByte7 === 0x00) { isZUID = true; info += ' <span style="color:#c084fc">[ZUID]</span>'; }
+            else if (configByte2 === 0x00) { isUFUID = true; info += ' <span style="color:#c084fc">[UFUID]</span>'; }
+            else { info += ' <span style="color:#c084fc">[USCUID/Gen1A]</span>'; }
+          }
+          if (configByte11 === 0x5A) info += ' <span style="color:var(--accent)">+MagicAuth</span>';
+          if (configSAK) configSAK = configBytes[15];
+          if (configSAK && configSAK !== 0x08) info += ' SAK_conf:0x' + configSAK.toString(16).padStart(2, '0');
+        }
+        // Check if sealed: config byte0=0x85 with GDM mode means Gen1A disabled
+        if (c0 === 0x85 && !isGen1a) isSealed = true;
+      }
+
+      // ===== Phase 5: Gen3 APDU probe =====
+      if (!wakeupType && !isGen1a && !isGen2 && isMf) {
+        try {
+          await ultra.cmdHf14aRaw({ data: cloneHexToBuf('90FBCCCC07' + uidHex.replace(/ /g, '')), activateRfField: false, keepRfField: true, timeout: 2000, autoSelect: false });
+          info += ' <span style="color:#c084fc">[Gen3 APDU]</span>';
+          wakeupType = 'gen3';
+        } catch(e) { /* not Gen3 */ }
+      }
+
+      // ===== Phase 6: Seal status =====
+      if (isUFUID) info += ' <span style="color:var(--orange)">⚠ Sealable</span>';
+      if (isZUID) info += ' <span style="color:var(--text-dim)">(ZUID, Gen1A always on)</span>';
+      if (isFUID) info += ' <span style="color:var(--text-dim)">(FUID, auto-seals on write)</span>';
+      if (isSealed) info += ' <span style="color:var(--red)">🔒 SEALED</span>';
+      if (wakeupType && !isSealed && !isFUID && !isZUID) info += ' <span style="color:var(--green)">🔓 Unsealed</span>';
+
+      // ===== Phase 7: Read block 0 =====
       try {
         var block0 = null;
         try { block0 = await ultra.cmdMf1ReadBlock(0); } catch(e) {}
@@ -3037,17 +3161,41 @@ function readerUpdateSniffList() {
           try { var result = await ultra.mf1ReadSectorByKeys(0, keyBufs); if (result && result.data) block0 = result.data.slice(0, 16); } catch(e2) {}
         }
         if (block0 && block0.length) {
-          var b0Hex = Array.from(block0.slice(0, 4)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-          info += ' Block0:' + b0Hex + '...';
-          if (tag.uid[0] !== block0[0]) info += ' <span style="color:var(--orange)">UID_mismatch=magic</span>';
-          if (block0.length > 5) {
-            var sakFromBlock = block0[5];
+          // Parse block0: uid4 + BCC + SAK + ATQA + mfr
+          var b0UID = Array.from(block0.slice(0, 4)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+          var b0BCC = block0[4];
+          var b0SAK = block0[5];
+          var b0ATQA = (block0[6] << 8) | block0[7];
+          var b0Mfr = Array.from(block0.slice(8, 16)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+
+          info += ' Block0:' + b0UID + '...';
+
+          // UID mismatch detection
+          if (tag.uid && block0[0] !== tag.uid[0]) {
+            info += ' <span style="color:var(--orange)">⚠ UID_mismatch→magic</span>';
+          }
+          // SAK comparison (anticoll vs block0)
+          if (tag.sak && b0SAK !== tag.sak[0]) {
+            var sakFromBlock = b0SAK;
             var sakKey2 = 'sakKnown' + sakFromBlock.toString(16).padStart(2, '0');
             var sakName2 = window.t(sakKey2);
-            if (sakName2 !== sakKey2) info += ' <span style="color:var(--accent)">&rarr;' + sakName2 + '</span>';
+            if (sakName2 !== sakKey2) info += ' <span style="color:var(--accent)">SAK_block0→' + sakName2 + '</span>';
+            else info += ' <span style="color:var(--accent)">SAK_block0:0x' + sakFromBlock.toString(16) + '</span>';
+          }
+          // ATQA comparison
+          if (tag.atqa) {
+            var atqaOrig = (tag.atqa[0] << 8) | tag.atqa[1];
+            if (b0ATQA !== atqaOrig) {
+              info += ' <span style="color:var(--accent)">ATQA_block0:0x' + b0ATQA.toString(16).padStart(4,'0') + '</span>';
+            }
+          }
+          // MFR data
+          if (b0Mfr !== '00 00 00 00 00 00 00 00') {
+            info += ' Mfr:' + b0Mfr;
           }
         } else { info += ' <span style="color:var(--text-faint)">Block0:locked</span>'; }
       } catch(e) { info += ' <span style="color:var(--text-faint)">Block0:nonMIFARE</span>'; }
+
       readerAddRealResponse(tag.uid, info);
     } else {
       readerLog('inf', 'No HF tag - trying LF...');
